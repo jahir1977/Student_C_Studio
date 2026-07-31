@@ -201,4 +201,48 @@ int main()
       expect(result.isSuccess, true);
     });
   });
+
+  group('ArrayChecker - array initialization validation', () {
+    test('detects too many array initializer values', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[3] = {10, 20, 30, 40};
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'too many initializers for array');
+      expect(
+        result.banglaExplanation,
+        'অ্যারের নির্ধারিত ঘরের তুলনায় বেশি মান দেওয়া হয়েছে।',
+      );
+      expect(result.errorLine, 4);
+    });
+
+    test('detects empty array initializer', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5] = {};
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'array initializer cannot be empty');
+      expect(
+        result.banglaExplanation,
+        'অ্যারে মান নির্ধারণ করতে হলে অন্তত একটি মান দিতে হবে।',
+      );
+      expect(result.errorLine, 4);
+    });
+  });
 }
