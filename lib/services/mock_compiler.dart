@@ -239,7 +239,10 @@ final String codeWithoutComments =
   // --------------------------------------------------
   // main() Function à¦†à¦›à§‡ à¦•à¦¿ à¦¨à¦¾ à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
-
+// TODO(v0.3 Cleanup):
+// Unused helper (Analyzer warning).
+// Candidate for removal after regression verification.
+/*
   bool _hasMainFunction(String code) {
     final RegExp mainPattern = RegExp(
       r'\b(?:int|void)\s+main\s*\(',
@@ -247,7 +250,7 @@ final String codeWithoutComments =
 
     return mainPattern.hasMatch(code);
   }
-
+*/
   // --------------------------------------------------
   // Semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   //
@@ -414,7 +417,7 @@ final String codeWithoutComments =
   // --------------------------------------------------
   // Preprocessor directive-à¦à¦° à¦¶à§‡à¦·à§‡ à¦à§à¦² semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
-
+/*
   int? _findInvalidPreprocessorDirective(
     String code,
   ) {
@@ -434,11 +437,11 @@ final String codeWithoutComments =
 
     return null;
   }
-
+  */
   // --------------------------------------------------
   // Function header-à¦à¦° à¦ªà¦° à¦à§à¦² semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
-
+/*
   int? _findSemicolonBeforeFunctionBody(
     String code,
   ) {
@@ -475,7 +478,7 @@ final String codeWithoutComments =
 
     return null;
   }
-
+  */
   bool _isLabel(String line) {
     final RegExp labelPattern = RegExp(
       r'^[A-Za-z_]\w*\s*:$',
