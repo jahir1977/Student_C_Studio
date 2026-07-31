@@ -448,4 +448,81 @@ int main()
       expect(result.errorLine, 6);
     });
   });
+  group('ArrayChecker - array bounds validation', () {
+  test('accepts first valid index', () {
+    const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[0] = 10;
+  return 0;
+}
+''';
+
+    final result = ArrayChecker().check(code);
+
+    expect(result.isSuccess, true);
+  });
+
+  test('accepts last valid index', () {
+    const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[4] = 50;
+  return 0;
+}
+''';
+
+    final result = ArrayChecker().check(code);
+
+    expect(result.isSuccess, true);
+  });
+
+  test('detects index equal to array size', () {
+    const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[5] = 60;
+  return 0;
+}
+''';
+
+    final result = ArrayChecker().check(code);
+
+    expect(result.isSuccess, false);
+    expect(result.error, 'array index out of bounds');
+    expect(
+      result.banglaExplanation,
+      'অ্যারের ইনডেক্স অবশ্যই ০ থেকে ৪ এর মধ্যে হতে হবে।',
+    );
+    expect(result.errorLine, 5);
+  });
+
+  test('detects index greater than array size', () {
+    const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[10] = 80;
+  return 0;
+}
+''';
+
+    final result = ArrayChecker().check(code);
+
+    expect(result.isSuccess, false);
+    expect(result.error, 'array index out of bounds');
+    expect(
+      result.banglaExplanation,
+      'অ্যারের ইনডেক্স অবশ্যই ০ থেকে ৪ এর মধ্যে হতে হবে।',
+    );
+    expect(result.errorLine, 5);
+  });
+});
 }

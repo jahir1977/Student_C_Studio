@@ -4,14 +4,15 @@ class ArrayChecker {
   CompilerResult check(String code) {
     final List<String> sanitizedLines = _sanitizeCode(code);
 
-    final Set<String> declaredArrayNames =
-        _collectDeclaredArrayNames(sanitizedLines);
+    final Map<String, int?> declaredArrays =
+        _collectDeclaredArrays(sanitizedLines);
 
     for (int index = 0; index < sanitizedLines.length; index++) {
       final String line = sanitizedLines[index];
       final int lineNumber = index + 1;
 
-      final CompilerResult? bracketResult = _checkSquareBrackets(
+      final CompilerResult? bracketResult =
+          _checkSquareBrackets(
         line,
         lineNumber,
       );
@@ -20,7 +21,8 @@ class ArrayChecker {
         return bracketResult;
       }
 
-      final CompilerResult? sizeResult = _checkArraySize(
+      final CompilerResult? sizeResult =
+          _checkArraySize(
         line,
         lineNumber,
       );
@@ -29,7 +31,8 @@ class ArrayChecker {
         return sizeResult;
       }
 
-      final CompilerResult? initializerResult = _checkArrayInitializer(
+      final CompilerResult? initializerResult =
+          _checkArrayInitializer(
         line,
         lineNumber,
       );
@@ -38,21 +41,33 @@ class ArrayChecker {
         return initializerResult;
       }
 
-      final CompilerResult? indexResult = _checkArrayIndex(
+      final CompilerResult? indexResult =
+          _checkArrayIndex(
         line,
         lineNumber,
-        declaredArrayNames,
+        declaredArrays.keys.toSet(),
       );
 
       if (indexResult != null) {
         return indexResult;
       }
 
+      final CompilerResult? boundsResult =
+          _checkArrayBounds(
+        line,
+        lineNumber,
+        declaredArrays,
+      );
+
+      if (boundsResult != null) {
+        return boundsResult;
+      }
+
       final CompilerResult? assignmentResult =
           _checkWholeArrayAssignment(
         line,
         lineNumber,
-        declaredArrayNames,
+        declaredArrays.keys.toSet(),
       );
 
       if (assignmentResult != null) {
@@ -65,15 +80,17 @@ class ArrayChecker {
     );
   }
 
-  Set<String> _collectDeclaredArrayNames(
+  Map<String, int?> _collectDeclaredArrays(
     List<String> lines,
   ) {
-    final Set<String> arrayNames = <String>{};
+    final Map<String, int?> declaredArrays =
+        <String, int?>{};
 
     final RegExp declarationPattern = RegExp(
       r'\b(?:int|float|double|char)\s+'
       r'([A-Za-z_][A-Za-z0-9_]*)\s*'
-      r'\[',
+      r'\[\s*([^\]]*)\s*\]'
+      r'(?:\s*=\s*\{([^}]*)\})?',
     );
 
     for (final String line in lines) {
@@ -81,15 +98,43 @@ class ArrayChecker {
           declarationPattern.allMatches(line);
 
       for (final RegExpMatch match in matches) {
-        final String? arrayName = match.group(1);
+        final String arrayName =
+            match.group(1)?.trim() ?? '';
 
-        if (arrayName != null && arrayName.isNotEmpty) {
-          arrayNames.add(arrayName);
+        final String sizeText =
+            match.group(2)?.trim() ?? '';
+
+        final String initializerText =
+            match.group(3)?.trim() ?? '';
+
+        if (arrayName.isEmpty) {
+          continue;
         }
+
+        if (RegExp(r'^\d+$').hasMatch(sizeText)) {
+          declaredArrays[arrayName] =
+              int.parse(sizeText);
+
+          continue;
+        }
+
+        if (sizeText.isEmpty &&
+            initializerText.isNotEmpty) {
+          declaredArrays[arrayName] =
+              _countInitializerValues(
+            initializerText,
+          );
+
+          continue;
+        }
+
+        // Variable বা expression দিয়ে size দেওয়া হলে
+        // compile-time bounds নির্ধারণ করা হবে না।
+        declaredArrays[arrayName] = null;
       }
     }
 
-    return arrayNames;
+    return declaredArrays;
   }
 
   CompilerResult? _checkSquareBrackets(
@@ -151,7 +196,7 @@ class ArrayChecker {
         continue;
       }
 
-      if (RegExp(r'^-\d+$').hasMatch(sizeText)) {
+      if (RegExp(r'^-\s*\d+$').hasMatch(sizeText)) {
         return CompilerResult.failure(
           error: 'array size cannot be negative',
           explanation:
@@ -217,7 +262,7 @@ class ArrayChecker {
         continue;
       }
 
-      // এই পর্যায়ে কেবল সরাসরি পূর্ণসংখ্যার size তুলনা করা হবে।
+      // কেবল সরাসরি পূর্ণসংখ্যার size তুলনা করা হবে।
       if (!RegExp(r'^\d+$').hasMatch(sizeText)) {
         continue;
       }
@@ -225,7 +270,9 @@ class ArrayChecker {
       final int declaredSize = int.parse(sizeText);
 
       final int initializerCount =
-          _countInitializerValues(initializerText);
+          _countInitializerValues(
+        initializerText,
+      );
 
       if (initializerCount > declaredSize) {
         return CompilerResult.failure(
@@ -264,7 +311,10 @@ class ArrayChecker {
         continue;
       }
 
-      if (_isArrayDeclarationMatch(line, match.start)) {
+      if (_isArrayDeclarationMatch(
+        line,
+        match.start,
+      )) {
         continue;
       }
 
@@ -308,12 +358,58 @@ class ArrayChecker {
     return null;
   }
 
+  CompilerResult? _checkArrayBounds(
+  String line,
+  int lineNumber,
+  Map<String, int?> declaredArrays,
+) {
+  final RegExp pattern = RegExp(
+    r'([A-Za-z_][A-Za-z0-9_]*)\[(\d+)\]',
+  );
+
+  for (final RegExpMatch match in pattern.allMatches(line)) {
+    final String arrayName = match.group(1)!;
+
+    if (!declaredArrays.containsKey(arrayName)) {
+      continue;
+    }
+
+    // declaration line skip
+    if (_isArrayDeclarationMatch(line, match.start)) {
+      continue;
+    }
+
+    final int? size = declaredArrays[arrayName];
+
+    if (size == null) {
+      continue;
+    }
+
+    final int index =
+        int.parse(match.group(2)!);
+
+    if (index >= size) {
+      return CompilerResult.failure(
+        error: 'array index out of bounds',
+        explanation:
+            'অ্যারের ইনডেক্স অবশ্যই ০ থেকে ${_toBanglaNumber(size - 1)} এর মধ্যে হতে হবে।',
+        errorLine: lineNumber,
+      );
+    }
+  }
+
+  return null;
+}
+
   bool _isArrayDeclarationMatch(
     String line,
     int arrayNameStart,
   ) {
     final String textBeforeArrayName =
-        line.substring(0, arrayNameStart);
+        line.substring(
+      0,
+      arrayNameStart,
+    );
 
     return RegExp(
       r'\b(?:int|float|double|char)\s*$',
@@ -347,7 +443,8 @@ class ArrayChecker {
       return null;
     }
 
-    final bool rightSideIsSingleIdentifier = RegExp(
+    final bool rightSideIsSingleIdentifier =
+        RegExp(
       r'^[A-Za-z_][A-Za-z0-9_]*$',
     ).hasMatch(rightText);
 
@@ -383,7 +480,8 @@ class ArrayChecker {
       index < initializerText.length;
       index++
     ) {
-      final String character = initializerText[index];
+      final String character =
+          initializerText[index];
 
       if (character == '(') {
         parenthesisDepth++;
@@ -407,15 +505,28 @@ class ArrayChecker {
 
     return valueCount;
   }
+  String _toBanglaNumber(int number) {
+  const english = '0123456789';
+  const bangla = '০১২৩৪৫৬৭৮৯';
+
+  return number
+      .toString()
+      .split('')
+      .map((digit) => bangla[english.indexOf(digit)])
+      .join();
+}
 
   List<String> _sanitizeCode(String code) {
-    final List<String> sanitizedLines = <String>[];
+    final List<String> sanitizedLines =
+        <String>[];
+
     final List<String> lines = code.split('\n');
 
     bool insideBlockComment = false;
 
     for (final String line in lines) {
-      final StringBuffer buffer = StringBuffer();
+      final StringBuffer buffer =
+          StringBuffer();
 
       bool insideString = false;
       bool insideCharacter = false;
@@ -511,7 +622,9 @@ class ArrayChecker {
         index++;
       }
 
-      sanitizedLines.add(buffer.toString());
+      sanitizedLines.add(
+        buffer.toString(),
+      );
     }
 
     return sanitizedLines;
