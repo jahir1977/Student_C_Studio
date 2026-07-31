@@ -1,6 +1,7 @@
 import '../../models/compiler_result.dart';
 import '../models/symbol.dart';
 import 'symbol_table.dart';
+import '../source_sanitizer.dart';
 
 class IdentifierChecker {
   // Reserved for future IdentifierChecker improvements.
@@ -41,8 +42,10 @@ class IdentifierChecker {
   };
 
   static CompilerResult? check(String code) {
-    final symbolTable = SymbolTable();
-    final lines = code.split('\n');
+  final symbolTable = SymbolTable();
+
+  final sanitizedSource = SourceSanitizer.sanitize(code);
+  final lines = sanitizedSource.split('\n');
 
     for (int index = 0; index < lines.length; index++) {
       final lineNumber = index + 1;
@@ -326,11 +329,19 @@ class IdentifierChecker {
       return true;
     }
 
-    if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*\s*:$').hasMatch(line)) {
-      return true;
-    }
+    if (RegExp(
+  r'^[A-Za-z_][A-Za-z0-9_]*\s*:$',
+).hasMatch(line)) {
+  return true;
+}
 
-    return false;
+if (RegExp(
+  r'^goto\s+[A-Za-z_][A-Za-z0-9_]*\s*;$',
+).hasMatch(line)) {
+  return true;
+}
+
+return false;
   }
 
   static bool _isFunctionName(String line, String identifier) {

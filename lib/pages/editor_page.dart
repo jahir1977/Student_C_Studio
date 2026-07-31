@@ -86,7 +86,8 @@ int main()
     final CompilerResult result =
         _compiler.compile(_codeController.text);
 
-    final String explanation = result.isSuccess
+    final String explanation =
+    result.banglaExplanation.trim().isNotEmpty
         ? result.banglaExplanation
         : _banglaErrorService.explain(result.error);
 

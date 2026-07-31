@@ -1,58 +1,50 @@
 import '../models/compiler_result.dart';
-import 'checkers/variable_declaration_checker.dart';
-import 'checkers/loop_checker.dart';
-import 'checkers/expression_checker.dart';
-import 'checkers/if_checker.dart';
-import 'checkers/switch_checker.dart';
-import 'checkers/while_checker.dart';
+
+import 'checkers/header_checker.dart';
+import 'checkers/quote_checker.dart';
+import 'checkers/parenthesis_checker.dart';
+import 'checkers/brace_checker.dart';
+import 'checkers/function_checker.dart';
+import 'checkers/identifier_checker.dart';
+import 'checkers/input_output_checker.dart';
+import 'checkers/format_specifier_checker.dart';
+import 'checkers/string_checker.dart';
+import 'checkers/pointer_checker.dart';
+
 import 'checkers/do_while_checker.dart';
 import 'checkers/break_continue_checker.dart';
 import 'checkers/goto_checker.dart';
 import 'checkers/array_checker.dart';
+import 'checkers/variable_declaration_checker.dart';
+import 'checkers/loop_checker.dart';
+import 'checkers/if_checker.dart';
+import 'checkers/switch_checker.dart';
+import 'checkers/while_checker.dart';
+import 'checkers/expression_checker.dart';
+import 'source_sanitizer.dart';
 
 class MockCompiler {
   const MockCompiler();
 
   CompilerResult compile(String code) {
-    final String source = code.trim();
+    final String source = code;
 
-    if (source.isEmpty) {
-      return CompilerResult.failure(
-        error: 'No code found',
-        explanation: '',
-      );
-    }
+    if (source.trim().isEmpty) {
+  return CompilerResult.failure(
+    error: 'No code found.',
+    explanation: 'কোনো কোড লেখা হয়নি।',
+  );
+}
 
-    final String codeWithoutComments = _removeComments(source);
+    final String sanitizedSource =
+    SourceSanitizer.sanitize(source);
 
-    if (!_hasMainFunction(codeWithoutComments)) {
-      return CompilerResult.failure(
-        error: "undefined reference to 'main'",
-        explanation: '',
-      );
-    }
+final String codeWithoutComments =
+    sanitizedSource;
 
-    final int? invalidPreprocessorLine =
-        _findInvalidPreprocessorDirective(codeWithoutComments);
-
-    if (invalidPreprocessorLine != null) {
-      return CompilerResult.failure(
-        error: "unexpected ';' after preprocessor directive",
-        explanation: '',
-        errorLine: invalidPreprocessorLine,
-      );
-    }
-
-    final int? misplacedSemicolonLine =
-        _findSemicolonBeforeFunctionBody(codeWithoutComments);
-
-    if (misplacedSemicolonLine != null) {
-      return CompilerResult.failure(
-        error: "unexpected '{'",
-        explanation: '',
-        errorLine: misplacedSemicolonLine,
-      );
-    }
+    // --------------------------------------------------
+    // Phase 1: Existing stable compiler pipeline
+    // --------------------------------------------------
 
     final CompilerResult doWhileResult =
         DoWhileChecker().check(codeWithoutComments);
@@ -62,7 +54,9 @@ class MockCompiler {
     }
 
     final CompilerResult breakContinueResult =
-        BreakContinueChecker().check(codeWithoutComments);
+        BreakContinueChecker().check(
+      codeWithoutComments,
+    );
 
     if (!breakContinueResult.isSuccess) {
       return breakContinueResult;
@@ -82,6 +76,10 @@ class MockCompiler {
       return arrayResult;
     }
 
+    // --------------------------------------------------
+    // Phase 5: Statement and declaration checkers
+    // --------------------------------------------------
+
     final int? semicolonErrorLine =
         _findMissingSemicolon(codeWithoutComments);
 
@@ -94,7 +92,9 @@ class MockCompiler {
     }
 
     final VariableCheckResult variableResult =
-        VariableDeclarationChecker.check(codeWithoutComments);
+        VariableDeclarationChecker.check(
+      codeWithoutComments,
+    );
 
     if (!variableResult.isValid) {
       return CompilerResult.failure(
@@ -139,6 +139,88 @@ class MockCompiler {
       return expressionResult;
     }
 
+
+    // --------------------------------------------------
+    // Phase 6: Newly integrated checker pipeline
+    //
+    // পুরোনো checker-গুলোর error precedence ঠিক রাখার জন্য
+    // এই checker-গুলো stable pipeline-এর পরে চালানো হচ্ছে।
+    // --------------------------------------------------
+
+    final CompilerResult headerResult =
+        HeaderChecker().check(source);
+
+    if (!headerResult.isSuccess) {
+      return headerResult;
+    }
+
+    final CompilerResult quoteResult =
+        QuoteChecker().check(source);
+
+    if (!quoteResult.isSuccess) {
+      return quoteResult;
+    }
+
+    final CompilerResult parenthesisResult =
+        ParenthesisChecker().check(source);
+
+    if (!parenthesisResult.isSuccess) {
+      return parenthesisResult;
+    }
+
+    final CompilerResult braceResult =
+        BraceChecker().check(source);
+
+    if (!braceResult.isSuccess) {
+      return braceResult;
+    }
+
+    final CompilerResult functionResult =
+        FunctionChecker().check(codeWithoutComments);
+
+    if (!functionResult.isSuccess) {
+      return functionResult;
+    }
+
+    final CompilerResult? identifierResult =
+        IdentifierChecker.check(codeWithoutComments);
+
+    if (identifierResult != null &&
+        !identifierResult.isSuccess) {
+      return identifierResult;
+    }
+
+    final CompilerResult inputOutputResult =
+        InputOutputChecker().check(codeWithoutComments);
+
+    if (!inputOutputResult.isSuccess) {
+      return inputOutputResult;
+    }
+
+    final CompilerResult formatSpecifierResult =
+        FormatSpecifierChecker().check(
+      codeWithoutComments,
+    );
+
+    if (!formatSpecifierResult.isSuccess) {
+      return formatSpecifierResult;
+    }
+
+    final CompilerResult stringResult =
+        StringChecker.check(codeWithoutComments);
+
+    if (!stringResult.isSuccess) {
+      return stringResult;
+    }
+
+    final CompilerResult pointerResult =
+        PointerChecker.check(codeWithoutComments);
+
+    if (!pointerResult.isSuccess) {
+      return pointerResult;
+    }
+
+    // পুরোনো brace fallback check আপাতত রাখা হয়েছে।
     if (!_hasBalancedBraces(codeWithoutComments)) {
       return CompilerResult.failure(
         error: "expected '}'",
@@ -155,7 +237,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // main() Function আছে কি না পরীক্ষা
+  // main() Function à¦†à¦›à§‡ à¦•à¦¿ à¦¨à¦¾ à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _hasMainFunction(String code) {
@@ -167,12 +249,12 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Semicolon পরীক্ষা
+  // Semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   //
-  // ব্লক-টাইপ ট্র্যাক করার জন্য একটি stack ব্যবহার করা হয়েছে:
-  //   'struct' -> struct/union ব্লক -> } এর পর ; লাগবে
-  //   'enum'   -> enum ব্লক -> } এর পর ; লাগবে
-  //   'other'  -> function/if/for/while/do/else ব্লক
+  // à¦¬à§à¦²à¦•-à¦Ÿà¦¾à¦‡à¦ª à¦Ÿà§à¦°à§à¦¯à¦¾à¦• à¦•à¦°à¦¾à¦° à¦œà¦¨à§à¦¯ à¦à¦•à¦Ÿà¦¿ stack à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à¦¾ à¦¹à§Ÿà§‡à¦›à§‡:
+  //   'struct' -> struct/union à¦¬à§à¦²à¦• -> } à¦à¦° à¦ªà¦° ; à¦²à¦¾à¦—à¦¬à§‡
+  //   'enum'   -> enum à¦¬à§à¦²à¦• -> } à¦à¦° à¦ªà¦° ; à¦²à¦¾à¦—à¦¬à§‡
+  //   'other'  -> function/if/for/while/do/else à¦¬à§à¦²à¦•
   // --------------------------------------------------
 
   int? _findMissingSemicolon(String code) {
@@ -330,7 +412,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Preprocessor directive-এর শেষে ভুল semicolon পরীক্ষা
+  // Preprocessor directive-à¦à¦° à¦¶à§‡à¦·à§‡ à¦à§à¦² semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   int? _findInvalidPreprocessorDirective(
@@ -354,7 +436,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Function header-এর পর ভুল semicolon পরীক্ষা
+  // Function header-à¦à¦° à¦ªà¦° à¦à§à¦² semicolon à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   int? _findSemicolonBeforeFunctionBody(
@@ -416,7 +498,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // struct / union / enum ব্লক হেডার পরীক্ষা
+  // struct / union / enum à¦¬à§à¦²à¦• à¦¹à§‡à¦¡à¦¾à¦° à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   String? _matchStructOrEnumHeader(
@@ -442,7 +524,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Function Header পরীক্ষা
+  // Function Header à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _isFunctionDefinitionHeader(
@@ -518,7 +600,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Condition পরীক্ষা
+  // Condition à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _isConditionalHeader(String line) {
@@ -553,7 +635,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Loop পরীক্ষা
+  // Loop à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _isLoopHeader(String line) {
@@ -641,7 +723,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Multiline Statement পরীক্ষা
+  // Multiline Statement à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _isContinuedLine(String line) {
@@ -658,7 +740,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Brace পরীক্ষা
+  // Brace à¦ªà¦°à§€à¦•à§à¦·à¦¾
   // --------------------------------------------------
 
   bool _hasBalancedBraces(String code) {
@@ -710,7 +792,7 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // printf() থেকে Output বের করা
+  // printf() à¦¥à§‡à¦•à§‡ Output à¦¬à§‡à¦° à¦•à¦°à¦¾
   // --------------------------------------------------
 
   String _extractPrintfOutput(String code) {
@@ -748,33 +830,4 @@ class MockCompiler {
         .replaceAll(r"\'", "'")
         .replaceAll(r'\\', '\\');
   }
-
-  // --------------------------------------------------
-  // Comment বাদ দেওয়া
-  // --------------------------------------------------
-
-  String _removeComments(String code) {
-    String result = code.replaceAllMapped(
-      RegExp(
-        r'/\*[\s\S]*?\*/',
-        multiLine: true,
-      ),
-      (Match match) {
-        final String comment =
-            match.group(0) ?? '';
-
-        final int newLineCount =
-            '\n'.allMatches(comment).length;
-
-        return '\n' * newLineCount;
-      },
-    );
-
-    result = result.replaceAll(
-      RegExp(r'//.*'),
-      '',
-    );
-
-    return result;
   }
-}

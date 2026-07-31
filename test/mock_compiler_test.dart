@@ -337,8 +337,35 @@ start:
 ''';
 
   final result = MockCompiler().compile(code);
+  
 
-  expect(result.isSuccess, isTrue);
+  expect(
+  result.isSuccess,
+  isTrue,
+  reason: result.displayText,
+);
+});
+test('preserves leading blank lines in error line number', () {
+  const code = '''
+
+
+int main()
+{
+  int a;
+  a = ();
+}
+''';
+
+  const compiler = MockCompiler();
+  final result = compiler.compile(code);
+
+  expect(result.isSuccess, isFalse);
+  expect(
+    result.error,
+    'Empty parenthesis is not allowed.',
+  );
+
+  expect(result.errorLine, 6);
 });
 
   });
