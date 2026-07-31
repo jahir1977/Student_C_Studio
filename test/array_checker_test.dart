@@ -245,4 +245,207 @@ int main()
       expect(result.errorLine, 4);
     });
   });
+
+  group('ArrayChecker - array index validation', () {
+    test('accepts integer array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[0] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, true);
+    });
+
+    test('accepts variable array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  int i = 2;
+  marks[i] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, true);
+    });
+
+    test('accepts expression as array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  int i = 1;
+  marks[i + 1] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, true);
+    });
+
+    test('detects empty array index during usage', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'array index cannot be empty');
+      expect(
+        result.banglaExplanation,
+        'অ্যারে কোনো মান ব্যবহার বা পরিবর্তন করতে হলে ইনডেক্স দিতে হবে।',
+      );
+      expect(result.errorLine, 5);
+    });
+
+    test('detects negative array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[-1] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'array index cannot be negative');
+      expect(
+        result.banglaExplanation,
+        'অ্যারের ইনডেক্স ঋণাত্মক সংখ্যা হতে পারে না।',
+      );
+      expect(result.errorLine, 5);
+    });
+
+    test('detects decimal array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[2.5] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'array index must be an integer');
+      expect(
+        result.banglaExplanation,
+        'অ্যারের ইনডেক্স হিসেবে পূর্ণসংখ্যা বা পূর্ণসংখ্যার এক্সপ্রেশন ব্যবহার করতে হবে।',
+      );
+      expect(result.errorLine, 5);
+    });
+
+    test('detects comma inside array index', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[1, 2] = 80;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'invalid array index');
+      expect(
+        result.banglaExplanation,
+        'একটি অ্যারের ইনডেক্সের মধ্যে কমা দিয়ে একাধিক মান লেখা যাবে না।',
+      );
+      expect(result.errorLine, 5);
+    });
+  });
+
+  group('ArrayChecker - whole array assignment validation', () {
+    test('accepts assignment to an array element', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks[0] = 90;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, true);
+    });
+
+    test('detects assigning a value to the whole array', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int marks[5];
+  marks = 90;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'cannot assign value to entire array');
+      expect(
+        result.banglaExplanation,
+        'সম্পূর্ণ অ্যারেতে সরাসরি একটি মান রাখা যায় না। নির্দিষ্ট ঘরে মান রাখতে ইনডেক্স ব্যবহার করতে হবে।',
+      );
+      expect(result.errorLine, 5);
+    });
+
+    test('detects assigning one whole array to another', () {
+      const code = '''
+#include<stdio.h>
+int main()
+{
+  int first[5];
+  int second[5];
+  first = second;
+  return 0;
+}
+''';
+
+      final result = ArrayChecker().check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'cannot assign one array to another');
+      expect(
+        result.banglaExplanation,
+        'একটি সম্পূর্ণ অ্যারেকে সরাসরি অন্য অ্যারেতে অ্যাসাইন করা যায় না।',
+      );
+      expect(result.errorLine, 6);
+    });
+  });
 }

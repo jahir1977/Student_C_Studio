@@ -4,12 +4,14 @@ class ArrayChecker {
   CompilerResult check(String code) {
     final List<String> sanitizedLines = _sanitizeCode(code);
 
+    final Set<String> declaredArrayNames =
+        _collectDeclaredArrayNames(sanitizedLines);
+
     for (int index = 0; index < sanitizedLines.length; index++) {
       final String line = sanitizedLines[index];
       final int lineNumber = index + 1;
 
-      final CompilerResult? bracketResult =
-          _checkSquareBrackets(
+      final CompilerResult? bracketResult = _checkSquareBrackets(
         line,
         lineNumber,
       );
@@ -18,8 +20,7 @@ class ArrayChecker {
         return bracketResult;
       }
 
-      final CompilerResult? sizeResult =
-          _checkArraySize(
+      final CompilerResult? sizeResult = _checkArraySize(
         line,
         lineNumber,
       );
@@ -28,8 +29,7 @@ class ArrayChecker {
         return sizeResult;
       }
 
-      final CompilerResult? initializerResult =
-          _checkArrayInitializer(
+      final CompilerResult? initializerResult = _checkArrayInitializer(
         line,
         lineNumber,
       );
@@ -37,11 +37,59 @@ class ArrayChecker {
       if (initializerResult != null) {
         return initializerResult;
       }
+
+      final CompilerResult? indexResult = _checkArrayIndex(
+        line,
+        lineNumber,
+        declaredArrayNames,
+      );
+
+      if (indexResult != null) {
+        return indexResult;
+      }
+
+      final CompilerResult? assignmentResult =
+          _checkWholeArrayAssignment(
+        line,
+        lineNumber,
+        declaredArrayNames,
+      );
+
+      if (assignmentResult != null) {
+        return assignmentResult;
+      }
     }
 
     return CompilerResult.success(
       output: '',
     );
+  }
+
+  Set<String> _collectDeclaredArrayNames(
+    List<String> lines,
+  ) {
+    final Set<String> arrayNames = <String>{};
+
+    final RegExp declarationPattern = RegExp(
+      r'\b(?:int|float|double|char)\s+'
+      r'([A-Za-z_][A-Za-z0-9_]*)\s*'
+      r'\[',
+    );
+
+    for (final String line in lines) {
+      final Iterable<RegExpMatch> matches =
+          declarationPattern.allMatches(line);
+
+      for (final RegExpMatch match in matches) {
+        final String? arrayName = match.group(1);
+
+        if (arrayName != null && arrayName.isNotEmpty) {
+          arrayNames.add(arrayName);
+        }
+      }
+    }
+
+    return arrayNames;
   }
 
   CompilerResult? _checkSquareBrackets(
@@ -192,7 +240,138 @@ class ArrayChecker {
     return null;
   }
 
-  int _countInitializerValues(String initializerText) {
+  CompilerResult? _checkArrayIndex(
+    String line,
+    int lineNumber,
+    Set<String> declaredArrayNames,
+  ) {
+    final RegExp indexPattern = RegExp(
+      r'\b([A-Za-z_][A-Za-z0-9_]*)\s*'
+      r'\[\s*([^\]]*)\s*\]',
+    );
+
+    final Iterable<RegExpMatch> matches =
+        indexPattern.allMatches(line);
+
+    for (final RegExpMatch match in matches) {
+      final String arrayName =
+          match.group(1)?.trim() ?? '';
+
+      final String indexText =
+          match.group(2)?.trim() ?? '';
+
+      if (!declaredArrayNames.contains(arrayName)) {
+        continue;
+      }
+
+      if (_isArrayDeclarationMatch(line, match.start)) {
+        continue;
+      }
+
+      if (indexText.isEmpty) {
+        return CompilerResult.failure(
+          error: 'array index cannot be empty',
+          explanation:
+              'অ্যারে কোনো মান ব্যবহার বা পরিবর্তন করতে হলে ইনডেক্স দিতে হবে।',
+          errorLine: lineNumber,
+        );
+      }
+
+      if (RegExp(r'^-\s*\d+$').hasMatch(indexText)) {
+        return CompilerResult.failure(
+          error: 'array index cannot be negative',
+          explanation:
+              'অ্যারের ইনডেক্স ঋণাত্মক সংখ্যা হতে পারে না।',
+          errorLine: lineNumber,
+        );
+      }
+
+      if (RegExp(r'^\d+\.\d+$').hasMatch(indexText)) {
+        return CompilerResult.failure(
+          error: 'array index must be an integer',
+          explanation:
+              'অ্যারের ইনডেক্স হিসেবে পূর্ণসংখ্যা বা পূর্ণসংখ্যার এক্সপ্রেশন ব্যবহার করতে হবে।',
+          errorLine: lineNumber,
+        );
+      }
+
+      if (indexText.contains(',')) {
+        return CompilerResult.failure(
+          error: 'invalid array index',
+          explanation:
+              'একটি অ্যারের ইনডেক্সের মধ্যে কমা দিয়ে একাধিক মান লেখা যাবে না।',
+          errorLine: lineNumber,
+        );
+      }
+    }
+
+    return null;
+  }
+
+  bool _isArrayDeclarationMatch(
+    String line,
+    int arrayNameStart,
+  ) {
+    final String textBeforeArrayName =
+        line.substring(0, arrayNameStart);
+
+    return RegExp(
+      r'\b(?:int|float|double|char)\s*$',
+    ).hasMatch(textBeforeArrayName);
+  }
+
+  CompilerResult? _checkWholeArrayAssignment(
+    String line,
+    int lineNumber,
+    Set<String> declaredArrayNames,
+  ) {
+    final RegExp assignmentPattern = RegExp(
+      r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*'
+      r'=\s*([^;]+)\s*;\s*$',
+    );
+
+    final RegExpMatch? match =
+        assignmentPattern.firstMatch(line);
+
+    if (match == null) {
+      return null;
+    }
+
+    final String leftName =
+        match.group(1)?.trim() ?? '';
+
+    final String rightText =
+        match.group(2)?.trim() ?? '';
+
+    if (!declaredArrayNames.contains(leftName)) {
+      return null;
+    }
+
+    final bool rightSideIsSingleIdentifier = RegExp(
+      r'^[A-Za-z_][A-Za-z0-9_]*$',
+    ).hasMatch(rightText);
+
+    if (rightSideIsSingleIdentifier &&
+        declaredArrayNames.contains(rightText)) {
+      return CompilerResult.failure(
+        error: 'cannot assign one array to another',
+        explanation:
+            'একটি সম্পূর্ণ অ্যারেকে সরাসরি অন্য অ্যারেতে অ্যাসাইন করা যায় না।',
+        errorLine: lineNumber,
+      );
+    }
+
+    return CompilerResult.failure(
+      error: 'cannot assign value to entire array',
+      explanation:
+          'সম্পূর্ণ অ্যারেতে সরাসরি একটি মান রাখা যায় না। নির্দিষ্ট ঘরে মান রাখতে ইনডেক্স ব্যবহার করতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
+
+  int _countInitializerValues(
+    String initializerText,
+  ) {
     int valueCount = 1;
 
     int parenthesisDepth = 0;
