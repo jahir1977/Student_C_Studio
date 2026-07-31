@@ -345,6 +345,58 @@ start:
   reason: result.displayText,
 );
 });
+test('ignores printf inside comment when checking headers', () {
+  const code = '''
+int main()
+{
+  // printf("This is only a comment");
+  return 0;
+}
+''';
+
+  final result = MockCompiler().compile(code);
+
+  expect(
+    result.isSuccess,
+    isTrue,
+    reason: result.displayText,
+  );
+});
+test('does not accept a commented-out stdio header', () {
+  const code = '''
+// #include<stdio.h>
+
+int main()
+{
+  printf("Hello");
+  return 0;
+}
+''';
+
+  final result = MockCompiler().compile(code);
+
+  expect(result.isSuccess, isFalse);
+  expect(result.error, "Missing header file 'stdio.h'.");
+  expect(result.errorLine, 5);
+});
+test('ignores quote brace and parenthesis inside comments', () {
+  const code = '''
+int main()
+{
+  // don't treat this ( or { as code
+  /* This comment contains ' and ) and } */
+  return 0;
+}
+''';
+
+  final result = MockCompiler().compile(code);
+
+  expect(
+    result.isSuccess,
+    isTrue,
+    reason: result.displayText,
+  );
+});
 test('preserves leading blank lines in error line number', () {
   const code = '''
 

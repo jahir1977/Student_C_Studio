@@ -148,28 +148,28 @@ final String codeWithoutComments =
     // --------------------------------------------------
 
     final CompilerResult headerResult =
-        HeaderChecker().check(source);
+        HeaderChecker().check(codeWithoutComments);
 
     if (!headerResult.isSuccess) {
       return headerResult;
     }
 
     final CompilerResult quoteResult =
-        QuoteChecker().check(source);
+        QuoteChecker().check(codeWithoutComments);
 
     if (!quoteResult.isSuccess) {
       return quoteResult;
     }
 
     final CompilerResult parenthesisResult =
-        ParenthesisChecker().check(source);
+        ParenthesisChecker().check(codeWithoutComments);
 
     if (!parenthesisResult.isSuccess) {
       return parenthesisResult;
     }
 
     final CompilerResult braceResult =
-        BraceChecker().check(source);
+        BraceChecker().check(codeWithoutComments);
 
     if (!braceResult.isSuccess) {
       return braceResult;
