@@ -102,7 +102,8 @@ class MockCompiler {
     // Phase 5: Statement and declaration checkers
     // --------------------------------------------------
 
-    final int? semicolonErrorLine = _findMissingSemicolon(codeWithoutComments);
+    final int? semicolonErrorLine =
+        _findMissingSemicolon(context.sanitizedLines);
 
     if (semicolonErrorLine != null) {
       return CompilerResult.failure(
@@ -271,8 +272,7 @@ class MockCompiler {
   //   'other'  -> function/if/for/while/do/else à¦¬à§à¦²à¦•
   // --------------------------------------------------
 
-  int? _findMissingSemicolon(String code) {
-    final List<String> lines = code.split('\n');
+  int? _findMissingSemicolon(List<String> lines) {
     final List<String> braceTypeStack = <String>[];
 
     String? pendingBlockType;

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:student_c_studio/models/compiler_context.dart';
+import 'package:student_c_studio/models/compiler_metadata.dart';
 import 'package:student_c_studio/services/compiler_context_builder.dart';
 import 'package:student_c_studio/services/mock_compiler.dart';
 
@@ -49,6 +50,50 @@ int main()
       compiler.compile(source);
 
       expect(buildCount, 1);
+    });
+
+    test('semicolon scanner uses CompilerContext sanitizedLines', () {
+      const String validSource = '''
+#include<stdio.h>
+
+int main()
+{
+    printf("Hello");
+    return 0;
+}
+''';
+
+      const List<String> linesWithMissingSemicolon = <String>[
+        '#include<stdio.h>',
+        '',
+        'int main()',
+        '{',
+        '    printf("Hello")',
+        '    return 0;',
+        '}',
+        '',
+      ];
+
+      final MockCompiler compiler = MockCompiler(
+        contextBuilder: (String source) {
+          return CompilerContext(
+            rawSource: source,
+            sanitizedSource: validSource,
+            rawLines: source.split('\n'),
+            sanitizedLines: linesWithMissingSemicolon,
+            metadata: CompilerMetadata(
+              lineCount: linesWithMissingSemicolon.length,
+            ),
+            includedHeaders: const <String>{'stdio.h'},
+          );
+        },
+      );
+
+      final result = compiler.compile(validSource);
+
+      expect(result.isSuccess, isFalse);
+      expect(result.error, "expected ';'");
+      expect(result.errorLine, 5);
     });
   });
 }
