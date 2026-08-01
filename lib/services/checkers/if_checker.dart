@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class IfChecker {
   CompilerResult check(String code) {
@@ -396,6 +397,11 @@ class IfChecker {
 
     return false;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 enum _IfType {
