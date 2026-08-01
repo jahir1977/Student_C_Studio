@@ -2,6 +2,7 @@ import '../../models/compiler_result.dart';
 import '../models/symbol.dart';
 import 'symbol_table.dart';
 import '../source_sanitizer.dart';
+import '../../models/compiler_context.dart';
 
 class IdentifierChecker {
   // Reserved for future IdentifierChecker improvements.
@@ -349,7 +350,13 @@ return false;
       '\\b${RegExp.escape(identifier)}\\s*\\(',
     ).hasMatch(line);
   }
+  static CompilerResult? checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
 }
+}
+
 
 class _DeclarationCheckResult {
   final bool handled;
