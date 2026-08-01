@@ -22,6 +22,8 @@ import 'checkers/switch_checker.dart';
 import 'checkers/while_checker.dart';
 import 'checkers/expression_checker.dart';
 import 'source_sanitizer.dart';
+import '../models/compiler_context.dart';
+import 'compiler_context_builder.dart';
 
 class MockCompiler {
   const MockCompiler();
@@ -39,8 +41,13 @@ class MockCompiler {
     final String sanitizedSource =
     SourceSanitizer.sanitize(source);
 
-final String codeWithoutComments =
+  final String codeWithoutComments =
     sanitizedSource;
+  
+  final CompilerContext context =
+    CompilerContextBuilder.build(source);
+
+  assert(context.sanitizedSource == codeWithoutComments);
 
     // --------------------------------------------------
     // Phase 1: Existing stable compiler pipeline
