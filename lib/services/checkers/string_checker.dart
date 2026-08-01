@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class StringChecker {
   static CompilerResult check(String code) {
@@ -797,6 +798,13 @@ class StringChecker {
         .map((digit) => bangla[english.indexOf(digit)])
         .join();
   }
+
+  static CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
+
 }
 
 class _StringSymbol {
