@@ -5,17 +5,7 @@ import '../source_sanitizer.dart';
 import '../../models/compiler_context.dart';
 
 class IdentifierChecker {
-  // Reserved for future IdentifierChecker improvements.
-/*
-  static const Set<String> _dataTypes = {
-    'int',
-    'float',
-    'double',
-    'char',
-    'long',
-    'short',
-  };
-*/
+  
   static const Set<String> _reservedWords = {
     'int',
     'float',
