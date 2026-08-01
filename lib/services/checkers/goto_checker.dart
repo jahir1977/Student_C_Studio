@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class GotoChecker {
   CompilerResult check(String code) {
@@ -339,6 +340,11 @@ class GotoChecker {
 
     return cleaned.toString();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _GotoReference {
