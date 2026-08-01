@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class QuoteChecker {
   CompilerResult check(String sourceCode) {
@@ -336,6 +337,11 @@ class QuoteChecker {
       return banglaDigits[digitIndex];
     }).join();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _QuoteScanResult {
