@@ -1,6 +1,6 @@
 import '../models/compiler_result.dart';
-
 import 'checkers/header_checker.dart';
+
 import 'checkers/quote_checker.dart';
 import 'checkers/parenthesis_checker.dart';
 import 'checkers/brace_checker.dart';
@@ -38,7 +38,7 @@ class MockCompiler {
   );
 }
 
-    final String sanitizedSource =
+  final String sanitizedSource =
     SourceSanitizer.sanitize(source);
 
   final String codeWithoutComments =
@@ -48,6 +48,23 @@ class MockCompiler {
     CompilerContextBuilder.build(source);
 
   assert(context.sanitizedSource == codeWithoutComments);
+
+  // ==================================================
+  // CompilerContext Pipeline
+  //
+  // Raw Source
+  //      ↓
+  // SourceSanitizer
+  //      ↓
+  // CompilerContextBuilder
+  //      ↓
+  // CompilerContext
+  //      ↓
+  // All Context-aware Checkers
+  //
+  // During migration, legacy checkers may continue to
+  // use codeWithoutComments until they are converted.
+  // ==================================================
 
     // --------------------------------------------------
     // Phase 1: Existing stable compiler pipeline
@@ -155,28 +172,28 @@ class MockCompiler {
     // --------------------------------------------------
 
     final CompilerResult headerResult =
-        HeaderChecker().check(codeWithoutComments);
+      HeaderChecker().checkContext(context);
 
     if (!headerResult.isSuccess) {
       return headerResult;
     }
 
     final CompilerResult quoteResult =
-        QuoteChecker().check(codeWithoutComments);
+      QuoteChecker().checkContext(context);
 
     if (!quoteResult.isSuccess) {
       return quoteResult;
     }
 
     final CompilerResult parenthesisResult =
-        ParenthesisChecker().check(codeWithoutComments);
+      ParenthesisChecker().checkContext(context);
 
     if (!parenthesisResult.isSuccess) {
       return parenthesisResult;
     }
 
     final CompilerResult braceResult =
-        BraceChecker().check(codeWithoutComments);
+      BraceChecker().checkContext(context);
 
     if (!braceResult.isSuccess) {
       return braceResult;
