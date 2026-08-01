@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class WhileChecker {
   CompilerResult check(String code) {
@@ -448,6 +449,11 @@ class WhileChecker {
       inBlockComment: inBlockComment,
     );
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _ConditionResult {
@@ -460,6 +466,7 @@ class _ConditionResult {
     required this.condition,
     required this.closingLineIndex,
   });
+
 }
 
 class _CleanLineResult {
