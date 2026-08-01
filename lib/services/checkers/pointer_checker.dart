@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class PointerChecker {
   static CompilerResult check(String code) {
@@ -686,6 +687,11 @@ class PointerChecker {
 
     return slashCount.isOdd;
   }
+  static CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _VariableSymbol {
