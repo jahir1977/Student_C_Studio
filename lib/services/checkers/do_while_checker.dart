@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class DoWhileChecker {
   CompilerResult check(String code) {
@@ -460,4 +461,9 @@ class DoWhileChecker {
 
     return cleaned.toString();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
