@@ -1,27 +1,28 @@
-import '../models/compiler_context.dart';
 import '../models/compiler_result.dart';
-import 'compiler_context_builder.dart';
-
-import 'checkers/array_checker.dart';
-import 'checkers/brace_checker.dart';
-import 'checkers/break_continue_checker.dart';
-import 'checkers/do_while_checker.dart';
-import 'checkers/expression_checker.dart';
-import 'checkers/format_specifier_checker.dart';
-import 'checkers/function_checker.dart';
-import 'checkers/goto_checker.dart';
 import 'checkers/header_checker.dart';
-import 'checkers/identifier_checker.dart';
-import 'checkers/if_checker.dart';
-import 'checkers/input_output_checker.dart';
-import 'checkers/loop_checker.dart';
-import 'checkers/parenthesis_checker.dart';
-import 'checkers/pointer_checker.dart';
+
 import 'checkers/quote_checker.dart';
+import 'checkers/parenthesis_checker.dart';
+import 'checkers/brace_checker.dart';
+import 'checkers/function_checker.dart';
+import 'checkers/identifier_checker.dart';
+import 'checkers/input_output_checker.dart';
+import 'checkers/format_specifier_checker.dart';
 import 'checkers/string_checker.dart';
-import 'checkers/switch_checker.dart';
+import 'checkers/pointer_checker.dart';
+
+import 'checkers/do_while_checker.dart';
+import 'checkers/break_continue_checker.dart';
+import 'checkers/goto_checker.dart';
+import 'checkers/array_checker.dart';
 import 'checkers/variable_declaration_checker.dart';
+import 'checkers/loop_checker.dart';
+import 'checkers/if_checker.dart';
+import 'checkers/switch_checker.dart';
 import 'checkers/while_checker.dart';
+import 'checkers/expression_checker.dart';
+import '../models/compiler_context.dart';
+import 'compiler_context_builder.dart';
 
 typedef CompilerContextFactory = CompilerContext Function(
   String source,
@@ -46,16 +47,19 @@ class MockCompiler {
 
     final CompilerContext context = _contextBuilder(source);
 
-    /*
-     * MockCompiler-এর private helper-গুলোর জন্য এই alias
-     * আপাতত রাখা হয়েছে।
-     *
-     * সব checker এখন একই CompilerContext ব্যবহার করে।
-     */
+    // Private output extraction still consumes sanitized source.
     final String codeWithoutComments = context.sanitizedSource;
 
+    // ==================================================
+    // CompilerContext Pipeline
+    //
+    // Raw source -> CompilerContextBuilder
+    // -> one shared CompilerContext
+    // -> all context-aware checkers
+    // ==================================================
+
     // --------------------------------------------------
-    // Phase 1: Early pipeline checkers
+    // Phase 1: Existing stable compiler pipeline
     // --------------------------------------------------
 
     final CompilerResult doWhileResult = DoWhileChecker().checkContext(context);
@@ -84,12 +88,11 @@ class MockCompiler {
     }
 
     // --------------------------------------------------
-    // Statement and declaration checks
+    // Phase 5: Statement and declaration checkers
     // --------------------------------------------------
 
-    final int? semicolonErrorLine = _findMissingSemicolon(
-      context.sanitizedLines,
-    );
+    final int? semicolonErrorLine =
+        _findMissingSemicolon(context.sanitizedLines);
 
     if (semicolonErrorLine != null) {
       return CompilerResult.failure(
@@ -144,10 +147,10 @@ class MockCompiler {
     }
 
     // --------------------------------------------------
-    // Structural and semantic checkers
+    // Phase 6: Newly integrated checker pipeline
     //
-    // Existing order is intentionally preserved to keep
-    // the current error precedence unchanged.
+    // পুরোনো checker-গুলোর error precedence ঠিক রাখার জন্য
+    // এই checker-গুলো stable pipeline-এর পরে চালানো হচ্ছে।
     // --------------------------------------------------
 
     final CompilerResult headerResult = HeaderChecker().checkContext(context);
@@ -197,7 +200,9 @@ class MockCompiler {
     }
 
     final CompilerResult formatSpecifierResult =
-        FormatSpecifierChecker().checkContext(context);
+        FormatSpecifierChecker().checkContext(
+      context,
+    );
 
     if (!formatSpecifierResult.isSuccess) {
       return formatSpecifierResult;
@@ -215,22 +220,7 @@ class MockCompiler {
       return pointerResult;
     }
 
-    /*
-     * পুরোনো brace fallback এই ধাপে রাখা হয়েছে।
-     * আলাদা regression step-এ এটি সরানো হবে।
-     */
-    if (!_hasBalancedBraces(
-      codeWithoutComments,
-    )) {
-      return CompilerResult.failure(
-        error: "expected '}'",
-        explanation: '',
-      );
-    }
-
-    final String output = _extractPrintfOutput(
-      codeWithoutComments,
-    );
+    final String output = _extractPrintfOutput(codeWithoutComments);
 
     return CompilerResult.success(
       output: output,
@@ -238,12 +228,10 @@ class MockCompiler {
   }
 
   // --------------------------------------------------
-  // Semicolon check
+  // Semicolon validation
   // --------------------------------------------------
 
-  int? _findMissingSemicolon(
-    List<String> lines,
-  ) {
+  int? _findMissingSemicolon(List<String> lines) {
     final List<String> braceTypeStack = <String>[];
 
     String? pendingBlockType;
@@ -311,9 +299,7 @@ class MockCompiler {
 
       if (structHeaderType != null) {
         if (line.endsWith('{')) {
-          braceTypeStack.add(
-            structHeaderType,
-          );
+          braceTypeStack.add(structHeaderType);
         } else {
           pendingBlockType = structHeaderType;
         }
@@ -321,10 +307,7 @@ class MockCompiler {
         continue;
       }
 
-      if (_isFunctionDefinitionHeader(
-        lines,
-        index,
-      )) {
+      if (_isFunctionDefinitionHeader(lines, index)) {
         if (line.endsWith('{')) {
           braceTypeStack.add('other');
         } else {
@@ -344,10 +327,7 @@ class MockCompiler {
         continue;
       }
 
-      if (_isDoWhileEnding(
-        lines,
-        index,
-      )) {
+      if (_isDoWhileEnding(lines, index)) {
         if (!line.endsWith(';')) {
           return index + 1;
         }
@@ -393,9 +373,7 @@ class MockCompiler {
     return null;
   }
 
-  bool _isPreprocessorLine(
-    String line,
-  ) {
+  bool _isPreprocessorLine(String line) {
     return line.startsWith('#');
   }
 
@@ -407,9 +385,7 @@ class MockCompiler {
     return labelPattern.hasMatch(line);
   }
 
-  bool _isCaseOrDefaultLabel(
-    String line,
-  ) {
+  bool _isCaseOrDefaultLabel(String line) {
     final RegExp casePattern = RegExp(
       r'^case\s+.+:\s*\{?\s*$',
     );
@@ -420,6 +396,10 @@ class MockCompiler {
 
     return casePattern.hasMatch(line) || defaultPattern.hasMatch(line);
   }
+
+  // --------------------------------------------------
+  // struct / union / enum header detection
+  // --------------------------------------------------
 
   String? _matchStructOrEnumHeader(
     String line,
@@ -436,14 +416,16 @@ class MockCompiler {
       return 'enum';
     }
 
-    if (structOrUnionPattern.hasMatch(
-      line,
-    )) {
+    if (structOrUnionPattern.hasMatch(line)) {
       return 'struct';
     }
 
     return null;
   }
+
+  // --------------------------------------------------
+  // Function header detection
+  // --------------------------------------------------
 
   bool _isFunctionDefinitionHeader(
     List<String> lines,
@@ -507,9 +489,11 @@ class MockCompiler {
     return null;
   }
 
-  bool _isConditionalHeader(
-    String line,
-  ) {
+  // --------------------------------------------------
+  // Conditional header detection
+  // --------------------------------------------------
+
+  bool _isConditionalHeader(String line) {
     final RegExp ifPattern = RegExp(
       r'^if\s*\(.*\)\s*\{?\s*$',
     );
@@ -532,17 +516,17 @@ class MockCompiler {
         switchPattern.hasMatch(line);
   }
 
-  bool _isElseAfterBrace(
-    String line,
-  ) {
+  bool _isElseAfterBrace(String line) {
     final RegExp elseAfterBracePattern = RegExp(
       r'^\}\s*else(\s+if\s*\(.*\))?\s*\{?\s*$',
     );
 
-    return elseAfterBracePattern.hasMatch(
-      line,
-    );
+    return elseAfterBracePattern.hasMatch(line);
   }
+
+  // --------------------------------------------------
+  // Loop header detection
+  // --------------------------------------------------
 
   bool _isLoopHeader(String line) {
     final RegExp forPattern = RegExp(
@@ -562,16 +546,12 @@ class MockCompiler {
         doPattern.hasMatch(line);
   }
 
-  bool _isInlineDoWhileEnding(
-    String line,
-  ) {
+  bool _isInlineDoWhileEnding(String line) {
     final RegExp inlineDoWhilePattern = RegExp(
       r'^\}\s*while\s*\(.*\)\s*;?\s*$',
     );
 
-    return inlineDoWhilePattern.hasMatch(
-      line,
-    );
+    return inlineDoWhilePattern.hasMatch(line);
   }
 
   bool _isDoWhileEnding(
@@ -610,21 +590,15 @@ class MockCompiler {
     for (int index = currentIndex - 1; index >= 0; index--) {
       final String line = lines[index].trim();
 
-      if (RegExp(
-        r'^do\s*\{?\s*$',
-      ).hasMatch(line)) {
+      if (RegExp(r'^do\s*\{?\s*$').hasMatch(line)) {
         return true;
       }
 
-      if (RegExp(
-        r'^while\s*\(',
-      ).hasMatch(line)) {
+      if (RegExp(r'^while\s*\(').hasMatch(line)) {
         return false;
       }
 
-      if (RegExp(
-        r'^for\s*\(',
-      ).hasMatch(line)) {
+      if (RegExp(r'^for\s*\(').hasMatch(line)) {
         return false;
       }
     }
@@ -632,9 +606,11 @@ class MockCompiler {
     return false;
   }
 
-  bool _isContinuedLine(
-    String line,
-  ) {
+  // --------------------------------------------------
+  // Multiline statement detection
+  // --------------------------------------------------
+
+  bool _isContinuedLine(String line) {
     return line.endsWith(',') ||
         line.endsWith('(') ||
         line.endsWith('[') ||
@@ -647,64 +623,11 @@ class MockCompiler {
         line.endsWith('||');
   }
 
-  /*
-   * পুরোনো brace fallback।
-   * BraceChecker regression verification শেষে
-   * এটি আলাদা cleanup step-এ সরানো হবে।
-   */
-  bool _hasBalancedBraces(
-    String code,
-  ) {
-    int balance = 0;
+  // --------------------------------------------------
+  // Extract output from printf()
+  // --------------------------------------------------
 
-    bool insideString = false;
-    bool insideCharacter = false;
-    bool escaped = false;
-
-    for (int index = 0; index < code.length; index++) {
-      final String character = code[index];
-
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-
-      if (character == r'\') {
-        escaped = true;
-        continue;
-      }
-
-      if (character == '"' && !insideCharacter) {
-        insideString = !insideString;
-        continue;
-      }
-
-      if (character == "'" && !insideString) {
-        insideCharacter = !insideCharacter;
-        continue;
-      }
-
-      if (insideString || insideCharacter) {
-        continue;
-      }
-
-      if (character == '{') {
-        balance++;
-      } else if (character == '}') {
-        balance--;
-
-        if (balance < 0) {
-          return false;
-        }
-      }
-    }
-
-    return balance == 0;
-  }
-
-  String _extractPrintfOutput(
-    String code,
-  ) {
+  String _extractPrintfOutput(String code) {
     final RegExp printfPattern = RegExp(
       r'printf\s*\(\s*"((?:\\.|[^"\\])*)"\s*\)\s*;',
       multiLine: true,
@@ -729,9 +652,7 @@ class MockCompiler {
     return output.toString();
   }
 
-  String _convertEscapeSequences(
-    String text,
-  ) {
+  String _convertEscapeSequences(String text) {
     return text
         .replaceAll(r'\n', '\n')
         .replaceAll(r'\t', '\t')
