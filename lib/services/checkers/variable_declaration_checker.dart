@@ -1,3 +1,5 @@
+import '../../models/compiler_context.dart';
+
 class VariableCheckResult {
   final bool isValid;
   final String error;
@@ -387,4 +389,9 @@ class VariableDeclarationChecker {
 
     return shapePattern.hasMatch(declarator);
   }
+  static VariableCheckResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
