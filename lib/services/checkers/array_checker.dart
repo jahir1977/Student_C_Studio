@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class ArrayChecker {
   CompilerResult check(String code) {
@@ -629,4 +630,9 @@ class ArrayChecker {
 
     return sanitizedLines;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
