@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class SwitchChecker {
   CompilerResult check(String code) {
@@ -646,6 +647,11 @@ class SwitchChecker {
 
     return line;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _ParenthesisResult {
