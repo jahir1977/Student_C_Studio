@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class InputOutputChecker {
   CompilerResult check(String sourceCode) {
@@ -115,6 +116,7 @@ class InputOutputChecker {
 
     return pattern.hasMatch(line);
   }
+  
 
   _InputOutputCall? _extractFunctionCall(
     String line,
@@ -320,6 +322,11 @@ class InputOutputChecker {
 
     return match?.group(1) ?? value;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _InputOutputCall {
