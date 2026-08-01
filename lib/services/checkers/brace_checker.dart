@@ -1,7 +1,8 @@
 import '../../models/compiler_context.dart';
 import '../../models/compiler_result.dart';
+import 'compiler_checker.dart';
 
-class BraceChecker {
+class BraceChecker implements CompilerChecker {
   CompilerResult check(String sourceCode) {
     final openingBraces = <_OpeningBrace>[];
 
@@ -238,6 +239,7 @@ class BraceChecker {
     }).join();
   }
 
+  @override
   CompilerResult checkContext(
     CompilerContext context,
   ) {

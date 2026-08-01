@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class DoWhileChecker {
+class DoWhileChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final String cleanedCode = _removeCommentsAndStrings(code);
     final RegExp doPattern = RegExp(r'\bdo\b');
@@ -77,12 +78,10 @@ class DoWhileChecker {
       position += 'while'.length;
       position = _skipWhitespace(cleanedCode, position);
 
-      if (position >= cleanedCode.length ||
-          cleanedCode[position] != '(') {
+      if (position >= cleanedCode.length || cleanedCode[position] != '(') {
         return CompilerResult.failure(
           error: 'Missing opening parenthesis in while statement.',
-          explanation:
-              'while-এর condition শুরু করার আগে "(" দিতে হবে।',
+          explanation: 'while-এর condition শুরু করার আগে "(" দিতে হবে।',
           errorLine: whileLine,
         );
       }
@@ -99,8 +98,7 @@ class DoWhileChecker {
       if (closingParenthesisIndex == -1) {
         return CompilerResult.failure(
           error: 'Missing closing parenthesis in while statement.',
-          explanation:
-              'while-এর condition শেষ করার পরে ")" দিতে হবে।',
+          explanation: 'while-এর condition শেষ করার পরে ")" দিতে হবে।',
           errorLine: whileLine,
         );
       }
@@ -115,8 +113,7 @@ class DoWhileChecker {
       if (condition.isEmpty) {
         return CompilerResult.failure(
           error: 'While condition cannot be empty.',
-          explanation:
-              'while-এর বন্ধনীর ভেতরে একটি condition লিখতে হবে।',
+          explanation: 'while-এর বন্ধনীর ভেতরে একটি condition লিখতে হবে।',
           errorLine: whileLine,
         );
       }
@@ -133,8 +130,7 @@ class DoWhileChecker {
       position = closingParenthesisIndex + 1;
       position = _skipWhitespace(cleanedCode, position);
 
-      if (position >= cleanedCode.length ||
-          cleanedCode[position] != ';') {
+      if (position >= cleanedCode.length || cleanedCode[position] != ';') {
         return CompilerResult.failure(
           error: 'Missing semicolon after do-while statement.',
           explanation: 'do-while statement শেষে ";" দিতে হবে।',
@@ -162,8 +158,7 @@ class DoWhileChecker {
   int _skipWhitespace(String text, int startIndex) {
     int index = startIndex;
 
-    while (index < text.length &&
-        RegExp(r'\s').hasMatch(text[index])) {
+    while (index < text.length && RegExp(r'\s').hasMatch(text[index])) {
       index++;
     }
 
@@ -183,23 +178,19 @@ class DoWhileChecker {
       return false;
     }
 
-    final String before =
-        index > 0 ? text[index - 1] : '';
+    final String before = index > 0 ? text[index - 1] : '';
 
     final int afterIndex = index + keyword.length;
 
-    final String after =
-        afterIndex < text.length ? text[afterIndex] : '';
+    final String after = afterIndex < text.length ? text[afterIndex] : '';
 
     final RegExp identifierCharacter = RegExp(r'[A-Za-z0-9_]');
 
-    if (before.isNotEmpty &&
-        identifierCharacter.hasMatch(before)) {
+    if (before.isNotEmpty && identifierCharacter.hasMatch(before)) {
       return false;
     }
 
-    if (after.isNotEmpty &&
-        identifierCharacter.hasMatch(after)) {
+    if (after.isNotEmpty && identifierCharacter.hasMatch(after)) {
       return false;
     }
 
@@ -287,8 +278,7 @@ class DoWhileChecker {
   }
 
   bool _containsInvalidOperatorPair(String condition) {
-    final String compact =
-        condition.replaceAll(RegExp(r'\s+'), '');
+    final String compact = condition.replaceAll(RegExp(r'\s+'), '');
 
     const Set<String> validPairs = <String>{
       '++',
@@ -312,8 +302,7 @@ class DoWhileChecker {
       final String first = compact[index];
       final String second = compact[index + 1];
 
-      if (!operators.contains(first) ||
-          !operators.contains(second)) {
+      if (!operators.contains(first) || !operators.contains(second)) {
         continue;
       }
 
@@ -350,9 +339,7 @@ class DoWhileChecker {
   int _lineNumberAt(String text, int position) {
     int lineNumber = 1;
 
-    for (int index = 0;
-        index < position && index < text.length;
-        index++) {
+    for (int index = 0; index < position && index < text.length; index++) {
       if (text[index] == '\n') {
         lineNumber++;
       }
@@ -461,9 +448,11 @@ class DoWhileChecker {
 
     return cleaned.toString();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }

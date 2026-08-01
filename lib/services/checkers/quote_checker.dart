@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class QuoteChecker {
+class QuoteChecker implements CompilerChecker {
   CompilerResult check(String sourceCode) {
     bool insideSingleLineComment = false;
     bool insideMultiLineComment = false;
@@ -11,9 +12,7 @@ class QuoteChecker {
 
     while (index < sourceCode.length) {
       final current = sourceCode[index];
-      final next = index + 1 < sourceCode.length
-          ? sourceCode[index + 1]
-          : '';
+      final next = index + 1 < sourceCode.length ? sourceCode[index + 1] : '';
 
       if (current == '\n') {
         lineNumber++;
@@ -259,8 +258,7 @@ class QuoteChecker {
       return _QuoteScanResult.failure(
         CompilerResult.failure(
           error: 'String cannot be written with single quotes.',
-          explanation:
-              "লাইন $banglaLine-এ String লেখার জন্য Single Quote (') "
+          explanation: "লাইন $banglaLine-এ String লেখার জন্য Single Quote (') "
               "ব্যবহার করা হয়েছে।\n"
               'String অবশ্যই Double Quote (")-এর মধ্যে লিখতে হবে।',
           errorLine: lineNumber,
@@ -274,8 +272,7 @@ class QuoteChecker {
       return _QuoteScanResult.failure(
         CompilerResult.failure(
           error: 'Character literal contains multiple characters.',
-          explanation:
-              "লাইন $banglaLine-এ Single Quote (')-এর মধ্যে একাধিক "
+          explanation: "লাইন $banglaLine-এ Single Quote (')-এর মধ্যে একাধিক "
               "Character লেখা হয়েছে।\n"
               "Single Quote (')-এর মধ্যে শুধুমাত্র একটি Character লেখা যাবে।",
           errorLine: lineNumber,
@@ -315,8 +312,7 @@ class QuoteChecker {
       lineStart--;
     }
 
-    while (lineEnd < sourceCode.length &&
-        sourceCode[lineEnd] != '\n') {
+    while (lineEnd < sourceCode.length && sourceCode[lineEnd] != '\n') {
       lineEnd++;
     }
 
@@ -337,11 +333,13 @@ class QuoteChecker {
       return banglaDigits[digitIndex];
     }).join();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _QuoteScanResult {

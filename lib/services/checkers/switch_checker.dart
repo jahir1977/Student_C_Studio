@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class SwitchChecker {
+class SwitchChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final List<String> lines = code.split('\n');
     final List<_SwitchBlock> switchBlocks = <_SwitchBlock>[];
@@ -23,8 +24,7 @@ class SwitchChecker {
       if (!afterSwitch.startsWith('(')) {
         return CompilerResult.failure(
           error: 'Missing opening parenthesis in switch statement.',
-          explanation:
-              'switch-এর expression শুরু করার আগে "(" দিতে হবে।',
+          explanation: 'switch-এর expression শুরু করার আগে "(" দিতে হবে।',
           errorLine: switchLineNumber,
         );
       }
@@ -32,8 +32,7 @@ class SwitchChecker {
       final int openingParenthesisIndex =
           lines[lineIndex].indexOf('(', lines[lineIndex].indexOf('switch'));
 
-      final _ParenthesisResult parenthesisResult =
-          _extractSwitchExpression(
+      final _ParenthesisResult parenthesisResult = _extractSwitchExpression(
         lines: lines,
         startLineIndex: lineIndex,
         openingParenthesisIndex: openingParenthesisIndex,
@@ -42,8 +41,7 @@ class SwitchChecker {
       if (!parenthesisResult.isComplete) {
         return CompilerResult.failure(
           error: 'Missing closing parenthesis in switch statement.',
-          explanation:
-              'switch-এর expression শেষ করার পরে ")" দিতে হবে।',
+          explanation: 'switch-এর expression শেষ করার পরে ")" দিতে হবে।',
           errorLine: switchLineNumber,
         );
       }
@@ -57,11 +55,9 @@ class SwitchChecker {
         );
       }
 
-      final _BraceLocation? openingBrace =
-          _findOpeningBraceAfterSwitch(
+      final _BraceLocation? openingBrace = _findOpeningBraceAfterSwitch(
         lines: lines,
-        closingParenthesisLineIndex:
-            parenthesisResult.closingLineIndex,
+        closingParenthesisLineIndex: parenthesisResult.closingLineIndex,
         closingParenthesisCharacterIndex:
             parenthesisResult.closingCharacterIndex,
       );
@@ -69,8 +65,7 @@ class SwitchChecker {
       if (openingBrace == null) {
         return CompilerResult.failure(
           error: 'Missing opening brace after switch statement.',
-          explanation:
-              'switch statement-এর caseগুলো লেখার আগে "{" দিতে হবে।',
+          explanation: 'switch statement-এর caseগুলো লেখার আগে "{" দিতে হবে।',
           errorLine: switchLineNumber,
         );
       }
@@ -102,8 +97,7 @@ class SwitchChecker {
       switchBlocks.add(switchBlock);
     }
 
-    final CompilerResult outsideLabelResult =
-        _checkLabelsOutsideSwitch(
+    final CompilerResult outsideLabelResult = _checkLabelsOutsideSwitch(
       lines: lines,
       switchBlocks: switchBlocks,
     );
@@ -125,11 +119,9 @@ class SwitchChecker {
     final Set<String> caseValues = <String>{};
     bool defaultFound = false;
 
-    for (
-      int lineIndex = block.openingBraceLineIndex;
-      lineIndex <= block.closingBraceLineIndex;
-      lineIndex++
-    ) {
+    for (int lineIndex = block.openingBraceLineIndex;
+        lineIndex <= block.closingBraceLineIndex;
+        lineIndex++) {
       final String line = _removeLineComment(lines[lineIndex]).trim();
 
       if (line.isEmpty) {
@@ -181,8 +173,7 @@ class SwitchChecker {
     required int lineNumber,
     required Set<String> caseValues,
   }) {
-    final String afterCase =
-        line.substring('case'.length).trimLeft();
+    final String afterCase = line.substring('case'.length).trimLeft();
 
     if (afterCase.isEmpty || afterCase.startsWith(':')) {
       return CompilerResult.failure(
@@ -202,8 +193,7 @@ class SwitchChecker {
       );
     }
 
-    final String caseValue =
-        afterCase.substring(0, colonIndex).trim();
+    final String caseValue = afterCase.substring(0, colonIndex).trim();
 
     if (caseValue.isEmpty) {
       return CompilerResult.failure(
@@ -213,8 +203,7 @@ class SwitchChecker {
       );
     }
 
-    final String normalizedValue =
-        caseValue.replaceAll(RegExp(r'\s+'), '');
+    final String normalizedValue = caseValue.replaceAll(RegExp(r'\s+'), '');
 
     if (caseValues.contains(normalizedValue)) {
       return CompilerResult.failure(
@@ -238,8 +227,7 @@ class SwitchChecker {
     required List<_SwitchBlock> switchBlocks,
   }) {
     for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      final String line =
-          _removeLineComment(lines[lineIndex]).trim();
+      final String line = _removeLineComment(lines[lineIndex]).trim();
 
       if (line.isEmpty) {
         continue;
@@ -258,8 +246,7 @@ class SwitchChecker {
       if (RegExp(r'^case\b').hasMatch(line) || line == 'case:') {
         return CompilerResult.failure(
           error: 'Case label found outside switch statement.',
-          explanation:
-              'case শুধু switch statement-এর ভেতরে ব্যবহার করা যায়।',
+          explanation: 'case শুধু switch statement-এর ভেতরে ব্যবহার করা যায়।',
           errorLine: lineIndex + 1,
         );
       }
@@ -293,29 +280,22 @@ class SwitchChecker {
     bool inBlockComment = false;
     bool escaped = false;
 
-    for (
-      int lineIndex = startLineIndex;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = startLineIndex;
+        lineIndex < lines.length;
+        lineIndex++) {
       final String line = lines[lineIndex];
 
-      final int startCharacterIndex = lineIndex == startLineIndex
-          ? openingParenthesisIndex + 1
-          : 0;
+      final int startCharacterIndex =
+          lineIndex == startLineIndex ? openingParenthesisIndex + 1 : 0;
 
       bool inLineComment = false;
 
-      for (
-        int characterIndex = startCharacterIndex;
-        characterIndex < line.length;
-        characterIndex++
-      ) {
+      for (int characterIndex = startCharacterIndex;
+          characterIndex < line.length;
+          characterIndex++) {
         final String character = line[characterIndex];
         final String nextCharacter =
-            characterIndex + 1 < line.length
-                ? line[characterIndex + 1]
-                : '';
+            characterIndex + 1 < line.length ? line[characterIndex + 1] : '';
 
         if (inLineComment) {
           break;
@@ -349,8 +329,7 @@ class SwitchChecker {
           continue;
         }
 
-        if ((inDoubleQuote || inSingleQuote) &&
-            character == r'\') {
+        if ((inDoubleQuote || inSingleQuote) && character == r'\') {
           expression.write(character);
           escaped = true;
           continue;
@@ -413,8 +392,7 @@ class SwitchChecker {
     required int closingParenthesisLineIndex,
     required int closingParenthesisCharacterIndex,
   }) {
-    final String closingLine =
-        lines[closingParenthesisLineIndex];
+    final String closingLine = lines[closingParenthesisLineIndex];
 
     final String remainingText = closingLine.substring(
       closingParenthesisCharacterIndex + 1,
@@ -425,9 +403,8 @@ class SwitchChecker {
     if (sameLineBraceIndex != -1) {
       return _BraceLocation(
         lineIndex: closingParenthesisLineIndex,
-        characterIndex: closingParenthesisCharacterIndex +
-            1 +
-            sameLineBraceIndex,
+        characterIndex:
+            closingParenthesisCharacterIndex + 1 + sameLineBraceIndex,
       );
     }
 
@@ -435,13 +412,10 @@ class SwitchChecker {
       return null;
     }
 
-    for (
-      int lineIndex = closingParenthesisLineIndex + 1;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
-      final String cleanedLine =
-          _removeLineComment(lines[lineIndex]).trim();
+    for (int lineIndex = closingParenthesisLineIndex + 1;
+        lineIndex < lines.length;
+        lineIndex++) {
+      final String cleanedLine = _removeLineComment(lines[lineIndex]).trim();
 
       if (cleanedLine.isEmpty) {
         continue;
@@ -471,30 +445,22 @@ class SwitchChecker {
     bool inBlockComment = false;
     bool escaped = false;
 
-    for (
-      int lineIndex = openingBrace.lineIndex;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = openingBrace.lineIndex;
+        lineIndex < lines.length;
+        lineIndex++) {
       final String line = lines[lineIndex];
 
       final int startCharacterIndex =
-          lineIndex == openingBrace.lineIndex
-              ? openingBrace.characterIndex
-              : 0;
+          lineIndex == openingBrace.lineIndex ? openingBrace.characterIndex : 0;
 
       bool inLineComment = false;
 
-      for (
-        int characterIndex = startCharacterIndex;
-        characterIndex < line.length;
-        characterIndex++
-      ) {
+      for (int characterIndex = startCharacterIndex;
+          characterIndex < line.length;
+          characterIndex++) {
         final String character = line[characterIndex];
         final String nextCharacter =
-            characterIndex + 1 < line.length
-                ? line[characterIndex + 1]
-                : '';
+            characterIndex + 1 < line.length ? line[characterIndex + 1] : '';
 
         if (inLineComment) {
           break;
@@ -527,8 +493,7 @@ class SwitchChecker {
           continue;
         }
 
-        if ((inDoubleQuote || inSingleQuote) &&
-            character == r'\') {
+        if ((inDoubleQuote || inSingleQuote) && character == r'\') {
           escaped = true;
           continue;
         }
@@ -581,8 +546,7 @@ class SwitchChecker {
         continue;
       }
 
-      if ((inDoubleQuote || inSingleQuote) &&
-          character == r'\') {
+      if ((inDoubleQuote || inSingleQuote) && character == r'\') {
         escaped = true;
         continue;
       }
@@ -597,9 +561,7 @@ class SwitchChecker {
         continue;
       }
 
-      if (!inDoubleQuote &&
-          !inSingleQuote &&
-          character == ':') {
+      if (!inDoubleQuote && !inSingleQuote && character == ':') {
         return index;
       }
     }
@@ -621,8 +583,7 @@ class SwitchChecker {
         continue;
       }
 
-      if ((inDoubleQuote || inSingleQuote) &&
-          character == r'\') {
+      if ((inDoubleQuote || inSingleQuote) && character == r'\') {
         escaped = true;
         continue;
       }
@@ -647,11 +608,13 @@ class SwitchChecker {
 
     return line;
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _ParenthesisResult {

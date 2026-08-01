@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class BreakContinueChecker {
+class BreakContinueChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final String cleanedCode = _removeCommentsAndStrings(code);
 
@@ -40,20 +41,16 @@ class BreakContinueChecker {
           index++;
         }
 
-        final String word =
-            cleanedCode.substring(wordStart, index);
+        final String word = cleanedCode.substring(wordStart, index);
 
         if (word == 'break') {
           final bool insideLoopOrSwitch = blockStack.any(
-            (type) =>
-                type == _BlockType.loop ||
-                type == _BlockType.switchBlock,
+            (type) => type == _BlockType.loop || type == _BlockType.switchBlock,
           );
 
           if (!insideLoopOrSwitch) {
             return CompilerResult.failure(
-              error:
-                  'break statement is not inside a loop or switch.',
+              error: 'break statement is not inside a loop or switch.',
               explanation:
                   'break শুধুমাত্র loop বা switch-এর ভিতরে ব্যবহার করা যায়।',
               errorLine: _lineNumberAt(cleanedCode, wordStart),
@@ -69,8 +66,7 @@ class BreakContinueChecker {
           if (!insideLoop) {
             return CompilerResult.failure(
               error: 'continue statement is not inside a loop.',
-              explanation:
-                  'continue শুধুমাত্র loop-এর ভিতরে ব্যবহার করা যায়।',
+              explanation: 'continue শুধুমাত্র loop-এর ভিতরে ব্যবহার করা যায়।',
               errorLine: _lineNumberAt(cleanedCode, wordStart),
             );
           }
@@ -91,8 +87,7 @@ class BreakContinueChecker {
   Map<int, _BlockType> _findControlledBlockOpenings(
     String code,
   ) {
-    final Map<int, _BlockType> openings =
-        <int, _BlockType>{};
+    final Map<int, _BlockType> openings = <int, _BlockType>{};
 
     int index = 0;
 
@@ -106,8 +101,7 @@ class BreakContinueChecker {
 
       index++;
 
-      while (index < code.length &&
-          _isIdentifierCharacter(code[index])) {
+      while (index < code.length && _isIdentifierCharacter(code[index])) {
         index++;
       }
 
@@ -116,17 +110,14 @@ class BreakContinueChecker {
       if (word == 'do') {
         final int nextIndex = _skipWhitespace(code, index);
 
-        if (nextIndex < code.length &&
-            code[nextIndex] == '{') {
+        if (nextIndex < code.length && code[nextIndex] == '{') {
           openings[nextIndex] = _BlockType.loop;
         }
 
         continue;
       }
 
-      if (word != 'for' &&
-          word != 'while' &&
-          word != 'switch') {
+      if (word != 'for' && word != 'while' && word != 'switch') {
         continue;
       }
 
@@ -136,8 +127,7 @@ class BreakContinueChecker {
         continue;
       }
 
-      final int closingParenthesis =
-          _findMatchingParenthesis(code, position);
+      final int closingParenthesis = _findMatchingParenthesis(code, position);
 
       if (closingParenthesis == -1) {
         continue;
@@ -168,9 +158,7 @@ class BreakContinueChecker {
   ) {
     int depth = 0;
 
-    for (int index = openingIndex;
-        index < code.length;
-        index++) {
+    for (int index = openingIndex; index < code.length; index++) {
       final String character = code[index];
 
       if (character == '(') {
@@ -190,8 +178,7 @@ class BreakContinueChecker {
   int _skipWhitespace(String text, int startIndex) {
     int index = startIndex;
 
-    while (index < text.length &&
-        RegExp(r'\s').hasMatch(text[index])) {
+    while (index < text.length && RegExp(r'\s').hasMatch(text[index])) {
       index++;
     }
 
@@ -209,9 +196,7 @@ class BreakContinueChecker {
   int _lineNumberAt(String text, int position) {
     int lineNumber = 1;
 
-    for (int index = 0;
-        index < position && index < text.length;
-        index++) {
+    for (int index = 0; index < position && index < text.length; index++) {
       if (text[index] == '\n') {
         lineNumber++;
       }
@@ -320,11 +305,13 @@ class BreakContinueChecker {
 
     return cleaned.toString();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 enum _BlockType {

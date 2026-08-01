@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class ExpressionChecker {
+class ExpressionChecker implements CompilerChecker {
   CompilerResult check(String sourceCode) {
     final ternaryResult = _checkTernaryOperators(sourceCode);
 
@@ -27,22 +28,19 @@ class ExpressionChecker {
         );
       }
 
-      final endingOperatorMatch =
-          RegExp(r'([+\-*/%])\s*;$').firstMatch(line);
+      final endingOperatorMatch = RegExp(r'([+\-*/%])\s*;$').firstMatch(line);
 
       if (endingOperatorMatch != null) {
         final operator = endingOperatorMatch.group(1)!;
 
         return CompilerResult.failure(
           error: "Expression is incomplete after operator '$operator'.",
-          explanation:
-              "অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকা প্রয়োজন।",
+          explanation: "অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকা প্রয়োজন।",
           errorLine: i + 1,
         );
       }
 
-      final startingOperatorMatch =
-          RegExp(r'=\s*([+*/%])').firstMatch(line);
+      final startingOperatorMatch = RegExp(r'=\s*([+*/%])').firstMatch(line);
 
       if (startingOperatorMatch != null) {
         final operator = startingOperatorMatch.group(1)!;
@@ -63,11 +61,9 @@ class ExpressionChecker {
         final secondOperator = invalidConsecutiveOperators.$2;
 
         return CompilerResult.failure(
-          error:
-              "Two operators cannot appear consecutively: "
+          error: "Two operators cannot appear consecutively: "
               "'$firstOperator' and '$secondOperator'.",
-          explanation:
-              "দুটি গাণিতিক অপারেটর পাশাপাশি ব্যবহার করা যাবে না।",
+          explanation: "দুটি গাণিতিক অপারেটর পাশাপাশি ব্যবহার করা যাবে না।",
           errorLine: i + 1,
         );
       }
@@ -90,16 +86,14 @@ class ExpressionChecker {
       if (operatorAfterOpeningParenthesisMatch != null) {
         return CompilerResult.failure(
           error: "Expression cannot start with operator after '('.",
-          explanation:
-              "খোলা বন্ধনীর পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
+          explanation: "খোলা বন্ধনীর পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
           errorLine: i + 1,
         );
       }
 
       // শুধু assignment-এর ডান পাশে () থাকলে empty parenthesis ধরা হবে।
       // main(), printf(), scanf() ইত্যাদি function call এখানে ধরা হবে না।
-      final emptyParenthesisMatch =
-          RegExp(r'=\s*\(\s*\)\s*;').firstMatch(line);
+      final emptyParenthesisMatch = RegExp(r'=\s*\(\s*\)\s*;').firstMatch(line);
 
       if (emptyParenthesisMatch != null) {
         return CompilerResult.failure(
@@ -120,8 +114,7 @@ class ExpressionChecker {
         if (missingOperatorMatch != null) {
           return CompilerResult.failure(
             error: "Operator expected between operands.",
-            explanation:
-                "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
+            explanation: "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
             errorLine: i + 1,
           );
         }
@@ -133,8 +126,7 @@ class ExpressionChecker {
       if (openingParenthesisCount > closingParenthesisCount) {
         return CompilerResult.failure(
           error: "Missing closing parenthesis ')'.",
-          explanation:
-              "খোলা বন্ধনীর জন্য একটি সমাপনী বন্ধনী ')' দিতে হবে।",
+          explanation: "খোলা বন্ধনীর জন্য একটি সমাপনী বন্ধনী ')' দিতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -142,8 +134,7 @@ class ExpressionChecker {
       if (closingParenthesisCount > openingParenthesisCount) {
         return CompilerResult.failure(
           error: "Extra closing parenthesis ')'.",
-          explanation:
-              "এই সমাপনী বন্ধনী ')' এর জন্য কোনো খোলা বন্ধনী নেই।",
+          explanation: "এই সমাপনী বন্ধনী ')' এর জন্য কোনো খোলা বন্ধনী নেই।",
           errorLine: i + 1,
         );
       }
@@ -203,8 +194,7 @@ class ExpressionChecker {
           continue;
         }
 
-        if ((insideDoubleQuote || insideSingleQuote) &&
-            character == r'\') {
+        if ((insideDoubleQuote || insideSingleQuote) && character == r'\') {
           escaped = true;
           continue;
         }
@@ -239,8 +229,7 @@ class ExpressionChecker {
           if (questionStack.isEmpty) {
             final trimmedLine = line.trimLeft();
 
-            final isSwitchLabel =
-                trimmedLine.startsWith('case ') ||
+            final isSwitchLabel = trimmedLine.startsWith('case ') ||
                 trimmedLine.startsWith('default:');
 
             if (!isSwitchLabel && line.contains('=')) {
@@ -308,18 +297,15 @@ class ExpressionChecker {
   }
 
   (String, String)? _findInvalidConsecutiveOperators(String line) {
-    final matches =
-        RegExp(r'([+\-*/%])\s*([+\-*/%])').allMatches(line);
+    final matches = RegExp(r'([+\-*/%])\s*([+\-*/%])').allMatches(line);
 
     for (final match in matches) {
       final firstOperator = match.group(1)!;
       final secondOperator = match.group(2)!;
 
-      final isIncrement =
-          firstOperator == '+' && secondOperator == '+';
+      final isIncrement = firstOperator == '+' && secondOperator == '+';
 
-      final isDecrement =
-          firstOperator == '-' && secondOperator == '-';
+      final isDecrement = firstOperator == '-' && secondOperator == '-';
 
       if (isIncrement || isDecrement) {
         continue;
@@ -332,8 +318,7 @@ class ExpressionChecker {
   }
 
   String? _findOperatorBeforeClosingParenthesis(String line) {
-    final matches =
-        RegExp(r'([+\-*/%])\s*\)').allMatches(line);
+    final matches = RegExp(r'([+\-*/%])\s*\)').allMatches(line);
 
     for (final match in matches) {
       final operator = match.group(1)!;
@@ -398,11 +383,13 @@ class ExpressionChecker {
 
     return cleanedExpression.isEmpty;
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _TernaryQuestion {

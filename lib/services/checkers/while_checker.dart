@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class WhileChecker {
+class WhileChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final List<String> lines = code.split('\n');
 
@@ -26,23 +27,19 @@ class WhileChecker {
       }
 
       final int lineNumber = lineIndex + 1;
-      final RegExpMatch whileMatch =
-          RegExp(r'^while\b').firstMatch(line)!;
+      final RegExpMatch whileMatch = RegExp(r'^while\b').firstMatch(line)!;
 
-      final String afterWhile =
-          line.substring(whileMatch.end).trimLeft();
+      final String afterWhile = line.substring(whileMatch.end).trimLeft();
 
       if (!afterWhile.startsWith('(')) {
         return CompilerResult.failure(
           error: 'Missing opening parenthesis in while statement.',
-          explanation:
-              'while-এর condition শুরু করার আগে "(" দিতে হবে।',
+          explanation: 'while-এর condition শুরু করার আগে "(" দিতে হবে।',
           errorLine: lineNumber,
         );
       }
 
-      final int openingParenthesisIndex =
-          line.indexOf('(', whileMatch.end);
+      final int openingParenthesisIndex = line.indexOf('(', whileMatch.end);
 
       final _ConditionResult conditionResult = _extractCondition(
         lines: lines,
@@ -54,8 +51,7 @@ class WhileChecker {
       if (!conditionResult.isComplete) {
         return CompilerResult.failure(
           error: 'Missing closing parenthesis in while statement.',
-          explanation:
-              'while-এর condition শেষ করার পরে ")" দিতে হবে।',
+          explanation: 'while-এর condition শেষ করার পরে ")" দিতে হবে।',
           errorLine: lineNumber,
         );
       }
@@ -65,8 +61,7 @@ class WhileChecker {
       if (condition.isEmpty) {
         return CompilerResult.failure(
           error: 'While condition cannot be empty.',
-          explanation:
-              'while-এর বন্ধনীর ভেতরে একটি condition লিখতে হবে।',
+          explanation: 'while-এর বন্ধনীর ভেতরে একটি condition লিখতে হবে।',
           errorLine: lineNumber,
         );
       }
@@ -103,34 +98,25 @@ class WhileChecker {
     bool inBlockComment = false;
     bool escaped = false;
 
-    for (
-      int lineIndex = startLineIndex;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = startLineIndex;
+        lineIndex < lines.length;
+        lineIndex++) {
       final String currentLine =
-          lineIndex == startLineIndex
-              ? cleanedFirstLine
-              : lines[lineIndex];
+          lineIndex == startLineIndex ? cleanedFirstLine : lines[lineIndex];
 
       final int startCharacterIndex =
-          lineIndex == startLineIndex
-              ? openingParenthesisIndex + 1
-              : 0;
+          lineIndex == startLineIndex ? openingParenthesisIndex + 1 : 0;
 
       bool inLineComment = false;
 
-      for (
-        int characterIndex = startCharacterIndex;
-        characterIndex < currentLine.length;
-        characterIndex++
-      ) {
+      for (int characterIndex = startCharacterIndex;
+          characterIndex < currentLine.length;
+          characterIndex++) {
         final String character = currentLine[characterIndex];
 
-        final String nextCharacter =
-            characterIndex + 1 < currentLine.length
-                ? currentLine[characterIndex + 1]
-                : '';
+        final String nextCharacter = characterIndex + 1 < currentLine.length
+            ? currentLine[characterIndex + 1]
+            : '';
 
         if (inLineComment) {
           break;
@@ -164,8 +150,7 @@ class WhileChecker {
           continue;
         }
 
-        if ((inDoubleQuote || inSingleQuote) &&
-            character == r'\') {
+        if ((inDoubleQuote || inSingleQuote) && character == r'\') {
           condition.write(character);
           escaped = true;
           continue;
@@ -291,8 +276,7 @@ class WhileChecker {
         continue;
       }
 
-      if ((inDoubleQuote || inSingleQuote) &&
-          character == r'\') {
+      if ((inDoubleQuote || inSingleQuote) && character == r'\') {
         escaped = true;
         continue;
       }
@@ -326,8 +310,7 @@ class WhileChecker {
   }
 
   bool _containsInvalidConsecutiveOperators(String condition) {
-    final String compact =
-        condition.replaceAll(RegExp(r'\s+'), '');
+    final String compact = condition.replaceAll(RegExp(r'\s+'), '');
 
     const Set<String> validOperatorPairs = <String>{
       '++',
@@ -405,8 +388,7 @@ class WhileChecker {
         continue;
       }
 
-      if ((inDoubleQuote || inSingleQuote) &&
-          character == r'\') {
+      if ((inDoubleQuote || inSingleQuote) && character == r'\') {
         cleaned.write(' ');
         escaped = true;
         continue;
@@ -449,11 +431,13 @@ class WhileChecker {
       inBlockComment: inBlockComment,
     );
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _ConditionResult {
@@ -466,7 +450,6 @@ class _ConditionResult {
     required this.condition,
     required this.closingLineIndex,
   });
-
 }
 
 class _CleanLineResult {

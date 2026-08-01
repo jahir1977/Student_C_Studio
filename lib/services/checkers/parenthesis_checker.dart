@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class ParenthesisChecker {
+class ParenthesisChecker implements CompilerChecker {
   CompilerResult check(String sourceCode) {
     final openingParentheses = <int>[];
 
@@ -15,8 +16,7 @@ class ParenthesisChecker {
 
     for (int i = 0; i < sourceCode.length; i++) {
       final current = sourceCode[i];
-      final next =
-          i + 1 < sourceCode.length ? sourceCode[i + 1] : '';
+      final next = i + 1 < sourceCode.length ? sourceCode[i + 1] : '';
 
       if (current == '\n') {
         lineNumber++;
@@ -151,9 +151,11 @@ class ParenthesisChecker {
       return banglaDigits[index];
     }).join();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }

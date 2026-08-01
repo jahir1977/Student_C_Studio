@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class GotoChecker {
+class GotoChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final String cleanedCode = _removeCommentsAndStrings(code);
 
@@ -16,8 +17,7 @@ class GotoChecker {
 
     final List<_GotoReference> gotoReferences = <_GotoReference>[];
 
-    final CompilerResult? gotoError =
-        _collectAndValidateGotoStatements(
+    final CompilerResult? gotoError = _collectAndValidateGotoStatements(
       cleanedCode,
       gotoReferences,
     );
@@ -30,8 +30,7 @@ class GotoChecker {
       if (!declaredLabels.containsKey(reference.labelName)) {
         return CompilerResult.failure(
           error: 'Undefined label: ${reference.labelName}.',
-          explanation:
-              '"${reference.labelName}" নামে কোনো label পাওয়া যায়নি।',
+          explanation: '"${reference.labelName}" নামে কোনো label পাওয়া যায়নি।',
           errorLine: reference.lineNumber,
         );
       }
@@ -69,14 +68,12 @@ class GotoChecker {
 
         return CompilerResult.failure(
           error: 'Invalid label name: $invalidLabel.',
-          explanation:
-              'Label-এর নাম সংখ্যা দিয়ে শুরু করা যাবে না।',
+          explanation: 'Label-এর নাম সংখ্যা দিয়ে শুরু করা যাবে না।',
           errorLine: lineNumber,
         );
       }
 
-      final RegExpMatch? validMatch =
-          validLabelPattern.firstMatch(line);
+      final RegExpMatch? validMatch = validLabelPattern.firstMatch(line);
 
       if (validMatch == null) {
         continue;
@@ -120,8 +117,7 @@ class GotoChecker {
 
       index++;
 
-      while (index < code.length &&
-          _isIdentifierCharacter(code[index])) {
+      while (index < code.length && _isIdentifierCharacter(code[index])) {
         index++;
       }
 
@@ -138,22 +134,19 @@ class GotoChecker {
       if (index >= code.length || code[index] == ';') {
         return CompilerResult.failure(
           error: 'Label name is missing after goto.',
-          explanation:
-              'goto-এর পরে একটি বৈধ label-এর নাম লিখতে হবে।',
+          explanation: 'goto-এর পরে একটি বৈধ label-এর নাম লিখতে হবে।',
           errorLine: gotoLine,
         );
       }
 
       if (_isDigit(code[index])) {
-        while (index < code.length &&
-            _isIdentifierCharacter(code[index])) {
+        while (index < code.length && _isIdentifierCharacter(code[index])) {
           index++;
         }
 
         return CompilerResult.failure(
           error: 'Invalid label name after goto.',
-          explanation:
-              'Label-এর নাম সংখ্যা দিয়ে শুরু করা যাবে না।',
+          explanation: 'Label-এর নাম সংখ্যা দিয়ে শুরু করা যাবে না।',
           errorLine: gotoLine,
         );
       }
@@ -161,8 +154,7 @@ class GotoChecker {
       if (!_isIdentifierStart(code[index])) {
         return CompilerResult.failure(
           error: 'Invalid label name after goto.',
-          explanation:
-              'goto-এর পরে একটি বৈধ label-এর নাম লিখতে হবে।',
+          explanation: 'goto-এর পরে একটি বৈধ label-এর নাম লিখতে হবে।',
           errorLine: gotoLine,
         );
       }
@@ -171,21 +163,18 @@ class GotoChecker {
 
       index++;
 
-      while (index < code.length &&
-          _isIdentifierCharacter(code[index])) {
+      while (index < code.length && _isIdentifierCharacter(code[index])) {
         index++;
       }
 
-      final String labelName =
-          code.substring(labelStart, index);
+      final String labelName = code.substring(labelStart, index);
 
       index = _skipWhitespace(code, index);
 
       if (index >= code.length || code[index] != ';') {
         return CompilerResult.failure(
           error: 'Missing semicolon after goto statement.',
-          explanation:
-              'goto statement-এর শেষে semicolon (;) দিতে হবে।',
+          explanation: 'goto statement-এর শেষে semicolon (;) দিতে হবে।',
           errorLine: gotoLine,
         );
       }
@@ -206,8 +195,7 @@ class GotoChecker {
   int _skipWhitespace(String text, int startIndex) {
     int index = startIndex;
 
-    while (index < text.length &&
-        RegExp(r'\s').hasMatch(text[index])) {
+    while (index < text.length && RegExp(r'\s').hasMatch(text[index])) {
       index++;
     }
 
@@ -229,9 +217,7 @@ class GotoChecker {
   int _lineNumberAt(String text, int position) {
     int lineNumber = 1;
 
-    for (int index = 0;
-        index < position && index < text.length;
-        index++) {
+    for (int index = 0; index < position && index < text.length; index++) {
       if (text[index] == '\n') {
         lineNumber++;
       }
@@ -340,11 +326,13 @@ class GotoChecker {
 
     return cleaned.toString();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _GotoReference {

@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class LoopChecker {
+class LoopChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final lines = code.split('\n');
 
@@ -123,9 +124,8 @@ class LoopChecker {
           characterIndex < line.length;
           characterIndex++) {
         final character = line[characterIndex];
-        final nextCharacter = characterIndex + 1 < line.length
-            ? line[characterIndex + 1]
-            : '';
+        final nextCharacter =
+            characterIndex + 1 < line.length ? line[characterIndex + 1] : '';
 
         if (inLineComment) {
           break;
@@ -576,11 +576,13 @@ class LoopChecker {
 
     return false;
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
+    CompilerContext context,
   ) {
-  return check(context.sanitizedSource);
-}
+    return check(context.sanitizedSource);
+  }
 }
 
 class _ForExtractionResult {
@@ -595,5 +597,4 @@ class _ForExtractionResult {
     required this.closingLineIndex,
     required this.closingCharacterIndex,
   });
-  
 }

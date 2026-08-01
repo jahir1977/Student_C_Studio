@@ -1,7 +1,8 @@
 import '../../models/compiler_context.dart';
 import '../../models/compiler_result.dart';
+import 'compiler_checker.dart';
 
-class FunctionChecker {
+class FunctionChecker implements CompilerChecker {
   static const Set<String> _knownFunctions = {
     'main',
     'printf',
@@ -64,6 +65,7 @@ class FunctionChecker {
     );
   }
 
+  @override
   CompilerResult checkContext(
     CompilerContext context,
   ) {

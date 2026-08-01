@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class InputOutputChecker {
+class InputOutputChecker implements CompilerChecker {
   CompilerResult check(String sourceCode) {
     final variableTypes = _collectVariableTypes(sourceCode);
     final lines = sourceCode.split('\n');
@@ -116,7 +117,6 @@ class InputOutputChecker {
 
     return pattern.hasMatch(line);
   }
-  
 
   _InputOutputCall? _extractFunctionCall(
     String line,
@@ -197,8 +197,7 @@ class InputOutputChecker {
 
       if (!hasAddressOperator) {
         return CompilerResult.failure(
-          error:
-              "Missing address operator before variable '$variableName'.",
+          error: "Missing address operator before variable '$variableName'.",
           explanation:
               "scanf()-এ '$variableName' ভ্যারিয়েবলের আগে Address Operator (&) দিতে হবে।",
           errorLine: lineNumber,
@@ -240,8 +239,7 @@ class InputOutputChecker {
         // Initial Value বাদ দেওয়া হয়।
         // যেমন: int number = 10;
         if (cleanDeclaration.contains('=')) {
-          cleanDeclaration =
-              cleanDeclaration.split('=').first.trim();
+          cleanDeclaration = cleanDeclaration.split('=').first.trim();
         }
 
         final variableMatch = RegExp(
@@ -290,9 +288,7 @@ class InputOutputChecker {
         bracketDepth--;
       }
 
-      if (character == ',' &&
-          parenthesisDepth == 0 &&
-          bracketDepth == 0) {
+      if (character == ',' && parenthesisDepth == 0 && bracketDepth == 0) {
         arguments.add(buffer.toString().trim());
         buffer.clear();
       } else {
@@ -304,9 +300,7 @@ class InputOutputChecker {
       arguments.add(buffer.toString().trim());
     }
 
-    return arguments
-        .where((argument) => argument.isNotEmpty)
-        .toList();
+    return arguments.where((argument) => argument.isNotEmpty).toList();
   }
 
   String _normalizeVariableName(String argument) {
@@ -322,11 +316,13 @@ class InputOutputChecker {
 
     return match?.group(1) ?? value;
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _InputOutputCall {

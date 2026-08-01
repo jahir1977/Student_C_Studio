@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class IfChecker {
+class IfChecker implements CompilerChecker {
   CompilerResult check(String code) {
     final List<String> lines = code.split('\n');
 
@@ -42,8 +43,7 @@ class IfChecker {
       final int openingParenthesisIndex =
           trimmedLine.indexOf('(', keywordEndIndex);
 
-      final _ConditionExtractionResult extractionResult =
-          _extractCondition(
+      final _ConditionExtractionResult extractionResult = _extractCondition(
         lines: lines,
         startLineIndex: lineIndex,
         firstLine: trimmedLine,
@@ -116,8 +116,7 @@ class IfChecker {
   }
 
   int _findElseIfKeywordEnd(String line) {
-    final RegExpMatch? match =
-        RegExp(r'^else\s+if\b').firstMatch(line);
+    final RegExpMatch? match = RegExp(r'^else\s+if\b').firstMatch(line);
 
     return match?.end ?? 0;
   }
@@ -136,31 +135,25 @@ class IfChecker {
     bool inBlockComment = false;
     bool escaped = false;
 
-    for (
-      int lineIndex = startLineIndex;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = startLineIndex;
+        lineIndex < lines.length;
+        lineIndex++) {
       final String currentLine =
           lineIndex == startLineIndex ? firstLine : lines[lineIndex];
 
-      final int startCharacterIndex = lineIndex == startLineIndex
-          ? openingParenthesisIndex + 1
-          : 0;
+      final int startCharacterIndex =
+          lineIndex == startLineIndex ? openingParenthesisIndex + 1 : 0;
 
       bool inLineComment = false;
 
-      for (
-        int characterIndex = startCharacterIndex;
-        characterIndex < currentLine.length;
-        characterIndex++
-      ) {
+      for (int characterIndex = startCharacterIndex;
+          characterIndex < currentLine.length;
+          characterIndex++) {
         final String character = currentLine[characterIndex];
 
-        final String nextCharacter =
-            characterIndex + 1 < currentLine.length
-                ? currentLine[characterIndex + 1]
-                : '';
+        final String nextCharacter = characterIndex + 1 < currentLine.length
+            ? currentLine[characterIndex + 1]
+            : '';
 
         if (inLineComment) {
           break;
@@ -194,8 +187,7 @@ class IfChecker {
           continue;
         }
 
-        if ((inDoubleQuote || inSingleQuote) &&
-            character == r'\') {
+        if ((inDoubleQuote || inSingleQuote) && character == r'\') {
           condition.write(character);
           escaped = true;
           continue;
@@ -321,8 +313,7 @@ class IfChecker {
         continue;
       }
 
-      if ((inDoubleQuote || inSingleQuote) &&
-          character == r'\') {
+      if ((inDoubleQuote || inSingleQuote) && character == r'\') {
         escaped = true;
         continue;
       }
@@ -356,8 +347,7 @@ class IfChecker {
   }
 
   bool _containsInvalidConsecutiveOperators(String condition) {
-    final String compact =
-        condition.replaceAll(RegExp(r'\s+'), '');
+    final String compact = condition.replaceAll(RegExp(r'\s+'), '');
 
     const Set<String> validOperators = <String>{
       '++',
@@ -397,11 +387,13 @@ class IfChecker {
 
     return false;
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 enum _IfType {

@@ -1,7 +1,8 @@
 import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import 'compiler_checker.dart';
 
-class FormatSpecifierChecker {
+class FormatSpecifierChecker implements CompilerChecker {
   static const Map<String, String> _expectedTypeBySpecifier = {
     '%c': 'char',
     '%d': 'int',
@@ -195,9 +196,7 @@ class FormatSpecifierChecker {
         bracketDepth--;
       }
 
-      if (character == ',' &&
-          parenthesisDepth == 0 &&
-          bracketDepth == 0) {
+      if (character == ',' && parenthesisDepth == 0 && bracketDepth == 0) {
         parts.add(buffer.toString());
         buffer.clear();
       } else {
@@ -240,11 +239,13 @@ class FormatSpecifierChecker {
       return banglaDigits[index];
     }).join();
   }
+
+  @override
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _FunctionCall {
