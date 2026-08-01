@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class FunctionChecker {
   static const Set<String> _knownFunctions = {
@@ -52,4 +53,9 @@ class FunctionChecker {
       explanation: 'Function usage is valid.',
     );
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
