@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class HeaderChecker {
   CompilerResult check(String sourceCode) {
@@ -79,4 +80,9 @@ class HeaderChecker {
       '\\b${RegExp.escape(functionName)}\\s*\\(',
     ).hasMatch(line);
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
