@@ -9,11 +9,14 @@ class CompilerContext {
 
   final CompilerMetadata metadata;
 
+  final Set<String> includedHeaders;
+
   const CompilerContext({
     required this.rawSource,
     required this.sanitizedSource,
     required this.rawLines,
     required this.sanitizedLines,
     required this.metadata,
+    required this.includedHeaders,
   });
 }

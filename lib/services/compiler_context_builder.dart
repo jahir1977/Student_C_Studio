@@ -21,6 +21,20 @@ class CompilerContextBuilder {
       metadata: CompilerMetadata(
         lineCount: source.split('\n').length,
       ),
+      includedHeaders:
+          _extractHeaders(sanitizedSource),
     );
+  }
+
+  static Set<String> _extractHeaders(
+    String source,
+  ) {
+    final RegExp pattern =
+        RegExp(r'#include\s*<([^>]+)>');
+
+    return pattern
+        .allMatches(source)
+        .map((m) => m.group(1)!)
+        .toSet();
   }
 }

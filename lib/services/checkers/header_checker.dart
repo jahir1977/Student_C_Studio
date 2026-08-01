@@ -80,9 +80,79 @@ class HeaderChecker {
       '\\b${RegExp.escape(functionName)}\\s*\\(',
     ).hasMatch(line);
   }
-  CompilerResult checkContext(
+
+ CompilerResult checkContext(
   CompilerContext context,
 ) {
-  return check(context.sanitizedSource);
+  final bool hasStdio =
+      context.includedHeaders.contains('stdio.h');
+
+  final bool hasMath =
+      context.includedHeaders.contains('math.h');
+
+  final bool hasString =
+      context.includedHeaders.contains('string.h');
+
+  final bool hasConio =
+      context.includedHeaders.contains('conio.h');
+
+  final List<String> lines =
+      context.sanitizedLines;
+
+  for (int i = 0; i < lines.length; i++) {
+    final String line = lines[i];
+
+    if (_containsFunction(line, 'printf') ||
+        _containsFunction(line, 'scanf')) {
+      if (!hasStdio) {
+        return CompilerResult.failure(
+          error: "Missing header file 'stdio.h'.",
+          explanation:
+              "printf() অথবা scanf() ব্যবহারের জন্য #include<stdio.h> লিখতে হবে।",
+          errorLine: i + 1,
+        );
+      }
+    }
+
+    if (_containsFunction(line, 'pow') ||
+        _containsFunction(line, 'sqrt')) {
+      if (!hasMath) {
+        return CompilerResult.failure(
+          error: "Missing header file 'math.h'.",
+          explanation:
+              "pow() অথবা sqrt() ব্যবহারের জন্য #include<math.h> লিখতে হবে।",
+          errorLine: i + 1,
+        );
+      }
+    }
+
+    if (_containsFunction(line, 'strlen') ||
+        _containsFunction(line, 'strcmp')) {
+      if (!hasString) {
+        return CompilerResult.failure(
+          error: "Missing header file 'string.h'.",
+          explanation:
+              "strlen() অথবা strcmp() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
+          errorLine: i + 1,
+        );
+      }
+    }
+
+    if (_containsFunction(line, 'getch')) {
+      if (!hasConio) {
+        return CompilerResult.failure(
+          error: "Missing header file 'conio.h'.",
+          explanation:
+              "getch() ব্যবহারের জন্য #include<conio.h> লিখতে হবে।",
+          errorLine: i + 1,
+        );
+      }
+    }
+  }
+
+  return CompilerResult.success(
+    output: '',
+    explanation: 'Header usage is valid.',
+  );
 }
 }
