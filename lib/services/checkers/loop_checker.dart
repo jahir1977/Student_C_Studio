@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class LoopChecker {
   CompilerResult check(String code) {
@@ -575,6 +576,11 @@ class LoopChecker {
 
     return false;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+  ) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _ForExtractionResult {
@@ -589,4 +595,5 @@ class _ForExtractionResult {
     required this.closingLineIndex,
     required this.closingCharacterIndex,
   });
+  
 }
