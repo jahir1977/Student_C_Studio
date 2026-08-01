@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class BraceChecker {
   CompilerResult check(String sourceCode) {
@@ -198,6 +199,11 @@ class BraceChecker {
       return banglaDigits[index];
     }).join();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _OpeningBrace {
