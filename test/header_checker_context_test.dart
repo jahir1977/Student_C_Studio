@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:student_c_studio/services/checkers/header_checker.dart';
 import 'package:student_c_studio/services/compiler_context_builder.dart';
 
 void main() {
-  group('CompilerContext migration', () {
-    test('HeaderChecker receives sanitized source from context', () {
+  group('HeaderChecker Context Migration', () {
+    test('HeaderChecker produces identical result using sanitized source', () {
       const source = '''
+// Fake header:
 // #include<stdio.h>
 
 #include<stdio.h>
@@ -17,15 +19,17 @@ int main()
 
       final context = CompilerContextBuilder.build(source);
 
-      expect(
-        context.sanitizedSource.contains('#include<stdio.h>'),
-        isTrue,
-      );
+      final legacy =
+          HeaderChecker().check(context.sanitizedSource);
 
-      expect(
-        context.sanitizedSource.contains('//'),
-        isFalse,
-      );
+      final migrated =
+          HeaderChecker().checkContext(context);
+
+      expect(migrated.isSuccess, legacy.isSuccess);
+      expect(migrated.error, legacy.error);
+      expect(migrated.errorLine, legacy.errorLine);
+      expect(migrated.output, legacy.output);
+      expect(migrated.displayText, legacy.displayText);
     });
   });
 }
