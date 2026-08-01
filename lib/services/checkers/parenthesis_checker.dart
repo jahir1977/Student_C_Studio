@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class ParenthesisChecker {
   CompilerResult check(String sourceCode) {
@@ -150,4 +151,9 @@ class ParenthesisChecker {
       return banglaDigits[index];
     }).join();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
