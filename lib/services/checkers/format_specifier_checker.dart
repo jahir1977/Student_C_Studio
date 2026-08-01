@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class FormatSpecifierChecker {
   static const Map<String, String> _expectedTypeBySpecifier = {
@@ -239,6 +240,11 @@ class FormatSpecifierChecker {
       return banglaDigits[index];
     }).join();
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _FunctionCall {
