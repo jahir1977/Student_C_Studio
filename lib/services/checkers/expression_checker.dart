@@ -1,4 +1,5 @@
 import '../../models/compiler_result.dart';
+import '../../models/compiler_context.dart';
 
 class ExpressionChecker {
   CompilerResult check(String sourceCode) {
@@ -397,6 +398,11 @@ class ExpressionChecker {
 
     return cleanedExpression.isEmpty;
   }
+  CompilerResult checkContext(
+  CompilerContext context,
+) {
+  return check(context.sanitizedSource);
+}
 }
 
 class _TernaryQuestion {
