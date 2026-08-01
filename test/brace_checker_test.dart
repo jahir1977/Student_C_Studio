@@ -299,5 +299,26 @@ int main()
 
       expect(result.isSuccess, isTrue);
     });
+
+    test(
+      'reports missing main brace when return is inside an if block',
+      () {
+        const code = '''
+int main()
+{
+    if (1)
+    {
+        return 0;
+    }
+''';
+
+        final checker = BraceChecker();
+        final result = checker.check(code);
+
+        expect(result.isSuccess, isFalse);
+        expect(result.error, 'Missing closing brace.');
+        expect(result.errorLine, 2);
+      },
+    );
   });
 }

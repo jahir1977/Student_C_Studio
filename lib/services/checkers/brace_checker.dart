@@ -1,5 +1,5 @@
-import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import '../../models/compiler_result.dart';
 
 class BraceChecker {
   CompilerResult check(String sourceCode) {
@@ -15,8 +15,7 @@ class BraceChecker {
 
     for (int i = 0; i < sourceCode.length; i++) {
       final current = sourceCode[i];
-      final next =
-          i + 1 < sourceCode.length ? sourceCode[i + 1] : '';
+      final next = i + 1 < sourceCode.length ? sourceCode[i + 1] : '';
 
       if (current == '\n') {
         lineNumber++;
@@ -100,6 +99,10 @@ class BraceChecker {
         openingBraces.add(
           _OpeningBrace(
             lineNumber: lineNumber,
+            indentation: _lineIndentationAt(
+              sourceCode,
+              i,
+            ),
           ),
         );
         continue;
@@ -123,16 +126,21 @@ class BraceChecker {
           lineNumber,
         );
 
-        /*
-         * return 0; এর পরের Closing Brace সাধারণত main()
-         * Function-এর Closing Brace।
-         *
-         * তাই একাধিক Opening Brace বাকি থাকলে main()-এর
-         * Opening Brace-টি বন্ধ করা হবে।
-         */
-        if (_isMainReturn(previousStatement) &&
-            openingBraces.length > 1) {
-          openingBraces.removeAt(0);
+        final closingIndentation = _lineIndentationAt(
+          sourceCode,
+          i,
+        );
+
+        if (_isMainReturn(previousStatement) && openingBraces.length > 1) {
+          final matchingIndex = openingBraces.lastIndexWhere(
+            (brace) => brace.indentation == closingIndentation,
+          );
+
+          if (matchingIndex >= 0) {
+            openingBraces.removeAt(matchingIndex);
+          } else {
+            openingBraces.removeLast();
+          }
         } else {
           openingBraces.removeLast();
         }
@@ -145,8 +153,7 @@ class BraceChecker {
 
       return CompilerResult.failure(
         error: 'Missing closing brace.',
-        explanation:
-            'লাইন $banglaLine-এ ব্যবহৃত Opening Brace ({)-এর বিপরীতে '
+        explanation: 'লাইন $banglaLine-এ ব্যবহৃত Opening Brace ({)-এর বিপরীতে '
             'Closing Brace (}) দেওয়া হয়নি।',
         errorLine: missingBraceLine,
       );
@@ -156,6 +163,37 @@ class BraceChecker {
       output: '',
       explanation: 'All braces are balanced.',
     );
+  }
+
+  int _lineIndentationAt(
+    String sourceCode,
+    int characterIndex,
+  ) {
+    int lineStart = characterIndex;
+
+    while (lineStart > 0 && sourceCode[lineStart - 1] != '\n') {
+      lineStart--;
+    }
+
+    int indentation = 0;
+
+    while (lineStart + indentation < characterIndex) {
+      final character = sourceCode[lineStart + indentation];
+
+      if (character == ' ') {
+        indentation++;
+        continue;
+      }
+
+      if (character == '\t') {
+        indentation += 4;
+        continue;
+      }
+
+      break;
+    }
+
+    return indentation;
   }
 
   String _previousMeaningfulLine(
@@ -199,17 +237,20 @@ class BraceChecker {
       return banglaDigits[index];
     }).join();
   }
+
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _OpeningBrace {
   final int lineNumber;
+  final int indentation;
 
   const _OpeningBrace({
     required this.lineNumber,
+    required this.indentation,
   });
 }
