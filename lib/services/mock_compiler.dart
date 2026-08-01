@@ -21,50 +21,50 @@ import 'checkers/if_checker.dart';
 import 'checkers/switch_checker.dart';
 import 'checkers/while_checker.dart';
 import 'checkers/expression_checker.dart';
-import 'source_sanitizer.dart';
 import '../models/compiler_context.dart';
 import 'compiler_context_builder.dart';
 
+typedef CompilerContextFactory = CompilerContext Function(
+  String source,
+);
+
 class MockCompiler {
-  const MockCompiler();
+  final CompilerContextFactory _contextBuilder;
+
+  const MockCompiler({
+    CompilerContextFactory contextBuilder = CompilerContextBuilder.build,
+  }) : _contextBuilder = contextBuilder;
 
   CompilerResult compile(String code) {
     final String source = code;
 
     if (source.trim().isEmpty) {
-  return CompilerResult.failure(
-    error: 'No code found.',
-    explanation: 'কোনো কোড লেখা হয়নি।',
-  );
-}
+      return CompilerResult.failure(
+        error: 'No code found.',
+        explanation: 'কোনো কোড লেখা হয়নি।',
+      );
+    }
 
-  final String sanitizedSource =
-    SourceSanitizer.sanitize(source);
+    final CompilerContext context = _contextBuilder(source);
 
-  final String codeWithoutComments =
-    sanitizedSource;
-  
-  final CompilerContext context =
-    CompilerContextBuilder.build(source);
+    final String codeWithoutComments = context.sanitizedSource;
 
-  assert(context.sanitizedSource == codeWithoutComments);
-
-  // ==================================================
-  // CompilerContext Pipeline
-  //
-  // Raw Source
-  //      ↓
-  // SourceSanitizer
-  //      ↓
-  // CompilerContextBuilder
-  //      ↓
-  // CompilerContext
-  //      ↓
-  // All Context-aware Checkers
-  //
-  // During migration, legacy checkers may continue to
-  // use codeWithoutComments until they are converted.
-  // ==================================================
+    // ==================================================
+    // CompilerContext Pipeline
+    //
+    // Raw Source
+    //      ↓
+    // SourceSanitizer
+    //      ↓
+    // CompilerContextBuilder
+    //      ↓
+    // CompilerContext
+    //      ↓
+    // All Context-aware Checkers
+    //
+    // During migration, legacy checkers may continue to
+    // use codeWithoutComments until they are converted.
+    // ==================================================
 
     // --------------------------------------------------
     // Phase 1: Existing stable compiler pipeline
@@ -77,8 +77,7 @@ class MockCompiler {
       return doWhileResult;
     }
 
-    final CompilerResult breakContinueResult =
-        BreakContinueChecker().check(
+    final CompilerResult breakContinueResult = BreakContinueChecker().check(
       codeWithoutComments,
     );
 
@@ -86,8 +85,7 @@ class MockCompiler {
       return breakContinueResult;
     }
 
-    final CompilerResult gotoResult =
-        GotoChecker().check(codeWithoutComments);
+    final CompilerResult gotoResult = GotoChecker().check(codeWithoutComments);
 
     if (!gotoResult.isSuccess) {
       return gotoResult;
@@ -104,8 +102,7 @@ class MockCompiler {
     // Phase 5: Statement and declaration checkers
     // --------------------------------------------------
 
-    final int? semicolonErrorLine =
-        _findMissingSemicolon(codeWithoutComments);
+    final int? semicolonErrorLine = _findMissingSemicolon(codeWithoutComments);
 
     if (semicolonErrorLine != null) {
       return CompilerResult.failure(
@@ -115,8 +112,7 @@ class MockCompiler {
       );
     }
 
-    final VariableCheckResult variableResult =
-        VariableDeclarationChecker.check(
+    final VariableCheckResult variableResult = VariableDeclarationChecker.check(
       codeWithoutComments,
     );
 
@@ -128,15 +124,13 @@ class MockCompiler {
       );
     }
 
-    final CompilerResult loopResult =
-        LoopChecker().check(codeWithoutComments);
+    final CompilerResult loopResult = LoopChecker().check(codeWithoutComments);
 
     if (!loopResult.isSuccess) {
       return loopResult;
     }
 
-    final CompilerResult ifResult =
-        IfChecker().check(codeWithoutComments);
+    final CompilerResult ifResult = IfChecker().check(codeWithoutComments);
 
     if (!ifResult.isSuccess) {
       return ifResult;
@@ -163,7 +157,6 @@ class MockCompiler {
       return expressionResult;
     }
 
-
     // --------------------------------------------------
     // Phase 6: Newly integrated checker pipeline
     //
@@ -171,29 +164,26 @@ class MockCompiler {
     // এই checker-গুলো stable pipeline-এর পরে চালানো হচ্ছে।
     // --------------------------------------------------
 
-    final CompilerResult headerResult =
-      HeaderChecker().checkContext(context);
+    final CompilerResult headerResult = HeaderChecker().checkContext(context);
 
     if (!headerResult.isSuccess) {
       return headerResult;
     }
 
-    final CompilerResult quoteResult =
-      QuoteChecker().checkContext(context);
+    final CompilerResult quoteResult = QuoteChecker().checkContext(context);
 
     if (!quoteResult.isSuccess) {
       return quoteResult;
     }
 
     final CompilerResult parenthesisResult =
-      ParenthesisChecker().checkContext(context);
+        ParenthesisChecker().checkContext(context);
 
     if (!parenthesisResult.isSuccess) {
       return parenthesisResult;
     }
 
-    final CompilerResult braceResult =
-      BraceChecker().checkContext(context);
+    final CompilerResult braceResult = BraceChecker().checkContext(context);
 
     if (!braceResult.isSuccess) {
       return braceResult;
@@ -209,8 +199,7 @@ class MockCompiler {
     final CompilerResult? identifierResult =
         IdentifierChecker.check(codeWithoutComments);
 
-    if (identifierResult != null &&
-        !identifierResult.isSuccess) {
+    if (identifierResult != null && !identifierResult.isSuccess) {
       return identifierResult;
     }
 
@@ -221,8 +210,7 @@ class MockCompiler {
       return inputOutputResult;
     }
 
-    final CompilerResult formatSpecifierResult =
-        FormatSpecifierChecker().check(
+    final CompilerResult formatSpecifierResult = FormatSpecifierChecker().check(
       codeWithoutComments,
     );
 
@@ -252,8 +240,7 @@ class MockCompiler {
       );
     }
 
-    final String output =
-        _extractPrintfOutput(codeWithoutComments);
+    final String output = _extractPrintfOutput(codeWithoutComments);
 
     return CompilerResult.success(
       output: output,
@@ -329,13 +316,10 @@ class MockCompiler {
 
       if (line.startsWith('}')) {
         final String? poppedType =
-            braceTypeStack.isNotEmpty
-                ? braceTypeStack.removeLast()
-                : null;
+            braceTypeStack.isNotEmpty ? braceTypeStack.removeLast() : null;
 
         final bool needsSemicolon =
-            poppedType == 'struct' ||
-            poppedType == 'enum';
+            poppedType == 'struct' || poppedType == 'enum';
 
         if (needsSemicolon && !line.endsWith(';')) {
           return index + 1;
@@ -344,8 +328,7 @@ class MockCompiler {
         continue;
       }
 
-      if (_isLabel(line) ||
-          _isCaseOrDefaultLabel(line)) {
+      if (_isLabel(line) || _isCaseOrDefaultLabel(line)) {
         if (line.endsWith('{')) {
           braceTypeStack.add('other');
         }
@@ -353,8 +336,7 @@ class MockCompiler {
         continue;
       }
 
-      final String? structHeaderType =
-          _matchStructOrEnumHeader(line);
+      final String? structHeaderType = _matchStructOrEnumHeader(line);
 
       if (structHeaderType != null) {
         if (line.endsWith('{')) {
@@ -414,9 +396,7 @@ class MockCompiler {
       }
 
       final String? currentBlock =
-          braceTypeStack.isNotEmpty
-              ? braceTypeStack.last
-              : null;
+          braceTypeStack.isNotEmpty ? braceTypeStack.last : null;
 
       if (currentBlock == 'enum') {
         continue;
@@ -520,8 +500,7 @@ class MockCompiler {
       r'^default\s*:\s*\{?\s*$',
     );
 
-    return casePattern.hasMatch(line) ||
-        defaultPattern.hasMatch(line);
+    return casePattern.hasMatch(line) || defaultPattern.hasMatch(line);
   }
 
   // --------------------------------------------------
@@ -558,8 +537,7 @@ class MockCompiler {
     List<String> lines,
     int currentIndex,
   ) {
-    final String line =
-        lines[currentIndex].trim();
+    final String line = lines[currentIndex].trim();
 
     final RegExp functionPattern = RegExp(
       r'^(?:'
@@ -579,8 +557,7 @@ class MockCompiler {
       return true;
     }
 
-    final String? nextLine =
-        _nextMeaningfulLine(
+    final String? nextLine = _nextMeaningfulLine(
       lines,
       currentIndex,
     );
@@ -592,11 +569,7 @@ class MockCompiler {
     List<String> lines,
     int currentIndex,
   ) {
-    for (
-      int index = currentIndex + 1;
-      index < lines.length;
-      index++
-    ) {
+    for (int index = currentIndex + 1; index < lines.length; index++) {
       final String line = lines[index].trim();
 
       if (line.isNotEmpty) {
@@ -611,11 +584,7 @@ class MockCompiler {
     List<String> lines,
     int currentIndex,
   ) {
-    for (
-      int index = currentIndex - 1;
-      index >= 0;
-      index--
-    ) {
+    for (int index = currentIndex - 1; index >= 0; index--) {
       final String line = lines[index].trim();
 
       if (line.isNotEmpty) {
@@ -695,8 +664,7 @@ class MockCompiler {
     List<String> lines,
     int currentIndex,
   ) {
-    final String line =
-        lines[currentIndex].trim();
+    final String line = lines[currentIndex].trim();
 
     final RegExp whilePattern = RegExp(
       r'^while\s*\(.*\)\s*;?\s*$',
@@ -706,8 +674,7 @@ class MockCompiler {
       return false;
     }
 
-    final String? previousLine =
-        _previousMeaningfulLine(
+    final String? previousLine = _previousMeaningfulLine(
       lines,
       currentIndex,
     );
@@ -726,11 +693,7 @@ class MockCompiler {
     List<String> lines,
     int currentIndex,
   ) {
-    for (
-      int index = currentIndex - 1;
-      index >= 0;
-      index--
-    ) {
+    for (int index = currentIndex - 1; index >= 0; index--) {
       final String line = lines[index].trim();
 
       if (RegExp(r'^do\s*\{?\s*$').hasMatch(line)) {
@@ -828,8 +791,7 @@ class MockCompiler {
       multiLine: true,
     );
 
-    final Iterable<RegExpMatch> matches =
-        printfPattern.allMatches(code);
+    final Iterable<RegExpMatch> matches = printfPattern.allMatches(code);
 
     if (matches.isEmpty) {
       return 'Program executed successfully.';
@@ -857,4 +819,4 @@ class MockCompiler {
         .replaceAll(r"\'", "'")
         .replaceAll(r'\\', '\\');
   }
-  }
+}
