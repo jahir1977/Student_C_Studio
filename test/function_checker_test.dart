@@ -169,5 +169,51 @@ int main()
 
       expect(result.isSuccess, isTrue);
     });
+    test('accepts for loop as a control statement', () {
+      const code = '''
+int main()
+{
+    int i;
+
+    for (i = 0; i < 3; i++)
+    {
+        printf("Hello");
+    }
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('accepts C conditional and loop keywords', () {
+      const code = '''
+int main()
+{
+    int i = 0;
+
+    if (i == 0)
+    {
+        while (i < 3)
+        {
+            i++;
+        }
+    }
+
+    switch (i)
+    {
+        case 3:
+            break;
+    }
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
   });
 }

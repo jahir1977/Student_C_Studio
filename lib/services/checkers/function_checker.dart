@@ -1,5 +1,5 @@
-import '../../models/compiler_result.dart';
 import '../../models/compiler_context.dart';
+import '../../models/compiler_result.dart';
 
 class FunctionChecker {
   static const Set<String> _knownFunctions = {
@@ -13,18 +13,28 @@ class FunctionChecker {
     'getch',
   };
 
+  static const Set<String> _controlKeywords = {
+    'if',
+    'for',
+    'while',
+    'switch',
+  };
+
   CompilerResult check(String sourceCode) {
     final lines = sourceCode.split('\n');
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
 
-      final matches = RegExp(r'\b([A-Za-z_]\w*)\s*\(').allMatches(line);
+      final matches = RegExp(
+        r'\b([A-Za-z_]\w*)\s*\(',
+      ).allMatches(line);
 
       for (final match in matches) {
         final functionName = match.group(1)!;
 
-        if (_knownFunctions.contains(functionName)) {
+        if (_knownFunctions.contains(functionName) ||
+            _controlKeywords.contains(functionName)) {
           continue;
         }
 
@@ -53,9 +63,10 @@ class FunctionChecker {
       explanation: 'Function usage is valid.',
     );
   }
+
   CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
