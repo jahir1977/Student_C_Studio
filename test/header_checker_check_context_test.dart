@@ -4,8 +4,10 @@ import 'package:student_c_studio/services/compiler_context_builder.dart';
 
 void main() {
   group('HeaderChecker.checkContext', () {
-    test('uses CompilerContext directly', () {
-      const source = '''
+    test(
+      'checkContext returns same result as check()',
+      () {
+        const String source = '''
 #include<stdio.h>
 
 int main()
@@ -15,11 +17,42 @@ int main()
 }
 ''';
 
-      final context = CompilerContextBuilder.build(source);
+        final context =
+            CompilerContextBuilder.build(source);
 
-      final result = HeaderChecker().checkContext(context);
+        final checker = HeaderChecker();
 
-      expect(result.isSuccess, isTrue);
-    });
+        final legacy =
+            checker.check(context.sanitizedSource);
+
+        final migrated =
+            checker.checkContext(context);
+
+        expect(
+          migrated.isSuccess,
+          legacy.isSuccess,
+        );
+
+        expect(
+          migrated.error,
+          legacy.error,
+        );
+
+        expect(
+          migrated.errorLine,
+          legacy.errorLine,
+        );
+
+        expect(
+          migrated.output,
+          legacy.output,
+        );
+
+        expect(
+          migrated.displayText,
+          legacy.displayText,
+        );
+      },
+    );
   });
 }
