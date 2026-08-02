@@ -11,10 +11,7 @@ import 'checkers/format_specifier_checker.dart';
 import 'checkers/string_checker.dart';
 import 'checkers/pointer_checker.dart';
 
-import 'checkers/do_while_checker.dart';
-import 'checkers/break_continue_checker.dart';
-import 'checkers/goto_checker.dart';
-import 'checkers/array_checker.dart';
+
 import 'checkers/variable_declaration_checker.dart';
 import 'checkers/loop_checker.dart';
 import 'checkers/if_checker.dart';
@@ -23,6 +20,7 @@ import 'checkers/while_checker.dart';
 import 'checkers/expression_checker.dart';
 import '../models/compiler_context.dart';
 import 'compiler_context_builder.dart';
+import 'checkers/default_checker_registry.dart';
 
 typedef CompilerContextFactory = CompilerContext Function(
   String source,
@@ -61,32 +59,12 @@ class MockCompiler {
     // --------------------------------------------------
     // Phase 1: Existing stable compiler pipeline
     // --------------------------------------------------
+  final CompilerResult? earlyCheckerResult =
+    _runRegistryCheckers(context);
 
-    final CompilerResult doWhileResult = DoWhileChecker().checkContext(context);
-
-    if (!doWhileResult.isSuccess) {
-      return doWhileResult;
-    }
-
-    final CompilerResult breakContinueResult =
-        BreakContinueChecker().checkContext(context);
-
-    if (!breakContinueResult.isSuccess) {
-      return breakContinueResult;
-    }
-
-    final CompilerResult gotoResult = GotoChecker().checkContext(context);
-
-    if (!gotoResult.isSuccess) {
-      return gotoResult;
-    }
-
-    final CompilerResult arrayResult = ArrayChecker().checkContext(context);
-
-    if (!arrayResult.isSuccess) {
-      return arrayResult;
-    }
-
+  if (earlyCheckerResult != null) {
+    return earlyCheckerResult;
+}
     // --------------------------------------------------
     // Phase 5: Statement and declaration checkers
     // --------------------------------------------------
@@ -660,5 +638,19 @@ class MockCompiler {
         .replaceAll(r'\"', '"')
         .replaceAll(r"\'", "'")
         .replaceAll(r'\\', '\\');
+  }
+
+  CompilerResult? _runRegistryCheckers(
+    CompilerContext context,
+  ) {
+    for (final checker in defaultCheckerRegistry.checkers) {
+      final result = checker.checkContext(context);
+
+      if (!result.isSuccess) {
+        return result;
+      }
+    }
+
+    return null;
   }
 }
