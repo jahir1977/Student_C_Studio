@@ -1,26 +1,14 @@
 import '../models/compiler_result.dart';
-import 'checkers/header_checker.dart';
-
-import 'checkers/quote_checker.dart';
-import 'checkers/parenthesis_checker.dart';
-import 'checkers/brace_checker.dart';
-import 'checkers/function_checker.dart';
-import 'checkers/identifier_checker.dart';
-import 'checkers/input_output_checker.dart';
-import 'checkers/format_specifier_checker.dart';
-import 'checkers/string_checker.dart';
-import 'checkers/pointer_checker.dart';
-
 
 import 'checkers/variable_declaration_checker.dart';
-import 'checkers/loop_checker.dart';
-import 'checkers/if_checker.dart';
-import 'checkers/switch_checker.dart';
-import 'checkers/while_checker.dart';
-import 'checkers/expression_checker.dart';
+
 import '../models/compiler_context.dart';
 import 'compiler_context_builder.dart';
 import 'checkers/default_checker_registry.dart';
+import 'checkers/structural_checker_registry.dart';
+import 'checkers/checker_registry.dart';
+import 'checkers/statement_checker_registry.dart';
+import 'checkers/library_checker_registry.dart';
 
 typedef CompilerContextFactory = CompilerContext Function(
   String source,
@@ -59,12 +47,14 @@ class MockCompiler {
     // --------------------------------------------------
     // Phase 1: Existing stable compiler pipeline
     // --------------------------------------------------
-  final CompilerResult? earlyCheckerResult =
-    _runRegistryCheckers(context);
+    final CompilerResult? earlyCheckerResult = _runCheckerRegistry(
+      context,
+      defaultCheckerRegistry,
+    );
 
-  if (earlyCheckerResult != null) {
-    return earlyCheckerResult;
-}
+    if (earlyCheckerResult != null) {
+      return earlyCheckerResult;
+    }
     // --------------------------------------------------
     // Phase 5: Statement and declaration checkers
     // --------------------------------------------------
@@ -92,38 +82,14 @@ class MockCompiler {
         errorLine: variableResult.line,
       );
     }
+    final CompilerResult? statementResult = _runCheckerRegistry(
+      context,
+      statementCheckerRegistry,
+    );
 
-    final CompilerResult loopResult = LoopChecker().checkContext(context);
-
-    if (!loopResult.isSuccess) {
-      return loopResult;
+    if (statementResult != null) {
+      return statementResult;
     }
-
-    final CompilerResult ifResult = IfChecker().checkContext(context);
-
-    if (!ifResult.isSuccess) {
-      return ifResult;
-    }
-
-    final CompilerResult switchResult = SwitchChecker().checkContext(context);
-
-    if (!switchResult.isSuccess) {
-      return switchResult;
-    }
-
-    final CompilerResult whileResult = WhileChecker().checkContext(context);
-
-    if (!whileResult.isSuccess) {
-      return whileResult;
-    }
-
-    final CompilerResult expressionResult =
-        ExpressionChecker().checkContext(context);
-
-    if (!expressionResult.isSuccess) {
-      return expressionResult;
-    }
-
     // --------------------------------------------------
     // Phase 6: Newly integrated checker pipeline
     //
@@ -131,71 +97,22 @@ class MockCompiler {
     // এই checker-গুলো stable pipeline-এর পরে চালানো হচ্ছে।
     // --------------------------------------------------
 
-    final CompilerResult headerResult = HeaderChecker().checkContext(context);
-
-    if (!headerResult.isSuccess) {
-      return headerResult;
-    }
-
-    final CompilerResult quoteResult = QuoteChecker().checkContext(context);
-
-    if (!quoteResult.isSuccess) {
-      return quoteResult;
-    }
-
-    final CompilerResult parenthesisResult =
-        ParenthesisChecker().checkContext(context);
-
-    if (!parenthesisResult.isSuccess) {
-      return parenthesisResult;
-    }
-
-    final CompilerResult braceResult = BraceChecker().checkContext(context);
-
-    if (!braceResult.isSuccess) {
-      return braceResult;
-    }
-
-    final CompilerResult functionResult =
-        FunctionChecker().checkContext(context);
-
-    if (!functionResult.isSuccess) {
-      return functionResult;
-    }
-
-    final CompilerResult? identifierResult =
-        IdentifierChecker.checkContext(context);
-
-    if (identifierResult != null && !identifierResult.isSuccess) {
-      return identifierResult;
-    }
-
-    final CompilerResult inputOutputResult =
-        InputOutputChecker().checkContext(context);
-
-    if (!inputOutputResult.isSuccess) {
-      return inputOutputResult;
-    }
-
-    final CompilerResult formatSpecifierResult =
-        FormatSpecifierChecker().checkContext(
+    final CompilerResult? structuralResult = _runCheckerRegistry(
       context,
+      structuralCheckerRegistry,
     );
 
-    if (!formatSpecifierResult.isSuccess) {
-      return formatSpecifierResult;
+    if (structuralResult != null) {
+      return structuralResult;
     }
 
-    final CompilerResult stringResult = StringChecker.checkContext(context);
+    final CompilerResult? libraryResult = _runCheckerRegistry(
+      context,
+      libraryCheckerRegistry,
+    );
 
-    if (!stringResult.isSuccess) {
-      return stringResult;
-    }
-
-    final CompilerResult pointerResult = PointerChecker.checkContext(context);
-
-    if (!pointerResult.isSuccess) {
-      return pointerResult;
+    if (libraryResult != null) {
+      return libraryResult;
     }
 
     final String output = _extractPrintfOutput(codeWithoutComments);
@@ -640,11 +557,12 @@ class MockCompiler {
         .replaceAll(r'\\', '\\');
   }
 
-  CompilerResult? _runRegistryCheckers(
+  CompilerResult? _runCheckerRegistry(
     CompilerContext context,
+    CheckerRegistry registry,
   ) {
-    for (final checker in defaultCheckerRegistry.checkers) {
-      final result = checker.checkContext(context);
+    for (final checker in registry.checkers) {
+      final CompilerResult result = checker.checkContext(context);
 
       if (!result.isSuccess) {
         return result;
