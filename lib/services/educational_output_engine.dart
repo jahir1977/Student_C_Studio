@@ -3,6 +3,14 @@ class EducationalOutputEngine {
 
   String execute(String code) {
     final Map<String, int> integerVariables = _collectIntegerVariables(code);
+    _applyIntegerAssignments(
+      code,
+      integerVariables,
+    );
+    _applyIncrementDecrement(
+      code,
+      integerVariables,
+    );
 
     final RegExp printfPattern = RegExp(
       r'printf\s*\(\s*"((?:\\.|[^"\\])*)"'
@@ -60,6 +68,58 @@ class EducationalOutputEngine {
     }
 
     return integerVariables;
+  }
+
+  void _applyIntegerAssignments(
+    String code,
+    Map<String, int> variables,
+  ) {
+    final RegExp assignmentPattern = RegExp(
+      r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+)\s*;',
+      multiLine: true,
+    );
+
+    for (final RegExpMatch match in assignmentPattern.allMatches(code)) {
+      final String variableName = match.group(1)!;
+      final String expression = match.group(2)!;
+
+      if (!variables.containsKey(variableName)) {
+        continue;
+      }
+
+      final int? value = _evaluateIntegerExpression(
+        expression,
+        variables,
+      );
+
+      if (value != null) {
+        variables[variableName] = value;
+      }
+    }
+  }
+
+  void _applyIncrementDecrement(
+    String code,
+    Map<String, int> variables,
+  ) {
+    final RegExp postfixPattern = RegExp(
+      r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\+\+|--)\s*;',
+      multiLine: true,
+    );
+
+    for (final RegExpMatch match in postfixPattern.allMatches(code)) {
+      final String variableName = match.group(1)!;
+      final String operator = match.group(2)!;
+
+      final int? currentValue = variables[variableName];
+
+      if (currentValue == null) {
+        continue;
+      }
+
+      variables[variableName] =
+          operator == '++' ? currentValue + 1 : currentValue - 1;
+    }
   }
 
   int? _evaluateIntegerExpression(
