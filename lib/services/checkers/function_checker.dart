@@ -21,21 +21,43 @@ class FunctionChecker implements CompilerChecker {
     'switch',
   };
 
+  static final RegExp _functionDefinitionPattern = RegExp(
+    r'\b'
+    r'(?:(?:signed|unsigned)\s+)?'
+    r'(?:(?:short|long\s+long|long)\s+)?'
+    r'(?:void|char|int|float|double)'
+    r'\s+'
+    r'(?:\*+\s*)?'
+    r'([A-Za-z_]\w*)'
+    r'\s*\('
+    r'[^;{}]*'
+    r'\)'
+    r'\s*\{',
+    multiLine: true,
+    dotAll: true,
+  );
+
+  static final RegExp _functionCallPattern = RegExp(
+    r'\b([A-Za-z_]\w*)\s*\(',
+  );
+
   CompilerResult check(String sourceCode) {
-    final lines = sourceCode.split('\n');
+    final Set<String> declaredFunctions = _extractDeclaredFunctions(sourceCode);
 
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
+    final List<String> lines = sourceCode.split('\n');
 
-      final matches = RegExp(
-        r'\b([A-Za-z_]\w*)\s*\(',
-      ).allMatches(line);
+    for (int index = 0; index < lines.length; index++) {
+      final String line = lines[index];
 
-      for (final match in matches) {
-        final functionName = match.group(1)!;
+      final Iterable<RegExpMatch> matches =
+          _functionCallPattern.allMatches(line);
+
+      for (final RegExpMatch match in matches) {
+        final String functionName = match.group(1)!;
 
         if (_knownFunctions.contains(functionName) ||
-            _controlKeywords.contains(functionName)) {
+            _controlKeywords.contains(functionName) ||
+            declaredFunctions.contains(functionName)) {
           continue;
         }
 
@@ -54,7 +76,7 @@ class FunctionChecker implements CompilerChecker {
 • strcmp()
 • getch()
 """,
-          errorLine: i + 1,
+          errorLine: index + 1,
         );
       }
     }
@@ -63,6 +85,23 @@ class FunctionChecker implements CompilerChecker {
       output: '',
       explanation: 'Function usage is valid.',
     );
+  }
+
+  Set<String> _extractDeclaredFunctions(String sourceCode) {
+    final Set<String> declaredFunctions = <String>{};
+
+    final Iterable<RegExpMatch> matches =
+        _functionDefinitionPattern.allMatches(sourceCode);
+
+    for (final RegExpMatch match in matches) {
+      final String? functionName = match.group(1);
+
+      if (functionName != null && functionName.isNotEmpty) {
+        declaredFunctions.add(functionName);
+      }
+    }
+
+    return declaredFunctions;
   }
 
   @override

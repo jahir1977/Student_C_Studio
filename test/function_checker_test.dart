@@ -215,5 +215,125 @@ int main()
 
       expect(result.isSuccess, isTrue);
     });
+    test('accepts a user-defined function call', () {
+      const code = '''
+int add(int a, int b)
+{
+    return a + b;
+}
+
+int main()
+{
+    int result;
+    result = add(5, 3);
+    return 0;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('accepts user-defined function declared after main', () {
+      const code = '''
+int main()
+{
+    int result;
+    result = add(5, 3);
+    return 0;
+}
+
+int add(int a, int b)
+{
+    return a + b;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('accepts multiline user-defined function header', () {
+      const code = '''
+int add(
+    int a,
+    int b
+)
+{
+    return a + b;
+}
+
+int main()
+{
+    int result;
+    result = add(5, 3);
+    return 0;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('still rejects an undefined function', () {
+      const code = '''
+int main()
+{
+    calculate(5);
+    return 0;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isFalse);
+      expect(result.error, "Unknown function 'calculate'.");
+      expect(result.errorLine, 3);
+    });
+
+    test('does not treat a function prototype as a definition', () {
+      const code = '''
+int calculate(int value);
+
+int main()
+{
+    calculate(5);
+    return 0;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isFalse);
+      expect(result.error, "Unknown function 'calculate'.");
+    });
+
+    test('accepts void user-defined function', () {
+      const code = '''
+void display()
+{
+    printf("Hello");
+}
+
+int main()
+{
+    display();
+    return 0;
+}
+''';
+
+      final checker = FunctionChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
   });
 }
