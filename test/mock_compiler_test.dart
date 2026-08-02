@@ -513,5 +513,47 @@ int main()
       expect(result.isSuccess, isTrue);
       expect(result.output, '15');
     });
+    test('prints subtraction expression from printf', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 10;
+    int b = 5;
+
+    printf("%d", a - b);
+
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, '5');
+    });
+    test('prints multiplication expression from printf', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 10;
+    int b = 5;
+
+    printf("%d", a * b);
+
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, '50');
+    });
   });
 }

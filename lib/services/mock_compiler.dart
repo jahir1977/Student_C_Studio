@@ -590,12 +590,12 @@ class MockCompiler {
       return variables[normalized];
     }
 
-    final RegExp additionPattern = RegExp(
-      r'^([A-Za-z_][A-Za-z0-9_]*|-?\d+)\s*\+\s*'
+    final RegExp expressionPattern = RegExp(
+      r'^([A-Za-z_][A-Za-z0-9_]*|-?\d+)\s*([+\-*/%])\s*'
       r'([A-Za-z_][A-Za-z0-9_]*|-?\d+)$',
     );
 
-    final RegExpMatch? match = additionPattern.firstMatch(normalized);
+    final RegExpMatch? match = expressionPattern.firstMatch(normalized);
 
     if (match == null) {
       return null;
@@ -607,7 +607,7 @@ class MockCompiler {
     );
 
     final int? rightValue = _resolveIntegerOperand(
-      match.group(2)!,
+      match.group(3)!,
       variables,
     );
 
@@ -615,7 +615,26 @@ class MockCompiler {
       return null;
     }
 
-    return leftValue + rightValue;
+    final String operator = match.group(2)!;
+
+    if (operator == '+') {
+      return leftValue + rightValue;
+    }
+
+    switch (operator) {
+      case '+':
+        return leftValue + rightValue;
+      case '-':
+        return leftValue - rightValue;
+      case '*':
+        return leftValue * rightValue;
+      case '/':
+        return rightValue == 0 ? null : leftValue ~/ rightValue;
+      case '%':
+        return rightValue == 0 ? null : leftValue % rightValue;
+      default:
+        return null;
+    }
   }
 
   int? _resolveIntegerOperand(
