@@ -523,8 +523,23 @@ class MockCompiler {
   // --------------------------------------------------
 
   String _extractPrintfOutput(String code) {
+    final Map<String, int> integerVariables = <String, int>{};
+
+    final RegExp integerDeclarationPattern = RegExp(
+      r'\bint\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?\d+)\s*;',
+    );
+
+    for (final RegExpMatch match
+        in integerDeclarationPattern.allMatches(code)) {
+      final String variableName = match.group(1)!;
+      final int variableValue = int.parse(match.group(2)!);
+
+      integerVariables[variableName] = variableValue;
+    }
+
     final RegExp printfPattern = RegExp(
-      r'printf\s*\(\s*"((?:\\.|[^"\\])*)"\s*\)\s*;',
+      r'printf\s*\(\s*"((?:\\.|[^"\\])*)"'
+      r'(?:\s*,\s*([^;]+?))?\s*\)\s*;',
       multiLine: true,
     );
 
@@ -537,14 +552,77 @@ class MockCompiler {
     final StringBuffer output = StringBuffer();
 
     for (final RegExpMatch match in matches) {
-      final String text = match.group(1) ?? '';
+      String text = match.group(1) ?? '';
+      final String? argument = match.group(2)?.trim();
 
-      output.write(
-        _convertEscapeSequences(text),
-      );
+      text = _convertEscapeSequences(text);
+
+      if (argument != null && argument.isNotEmpty && text.contains('%d')) {
+        final int? outputValue = _evaluateIntegerExpression(
+          argument,
+          integerVariables,
+        );
+
+        if (outputValue != null) {
+          text = text.replaceFirst('%d', outputValue.toString());
+        }
+      }
+
+      output.write(text);
     }
 
     return output.toString();
+  }
+
+  int? _evaluateIntegerExpression(
+    String expression,
+    Map<String, int> variables,
+  ) {
+    final String normalized = expression.trim();
+
+    final int? literalValue = int.tryParse(normalized);
+
+    if (literalValue != null) {
+      return literalValue;
+    }
+
+    if (variables.containsKey(normalized)) {
+      return variables[normalized];
+    }
+
+    final RegExp additionPattern = RegExp(
+      r'^([A-Za-z_][A-Za-z0-9_]*|-?\d+)\s*\+\s*'
+      r'([A-Za-z_][A-Za-z0-9_]*|-?\d+)$',
+    );
+
+    final RegExpMatch? match = additionPattern.firstMatch(normalized);
+
+    if (match == null) {
+      return null;
+    }
+
+    final int? leftValue = _resolveIntegerOperand(
+      match.group(1)!,
+      variables,
+    );
+
+    final int? rightValue = _resolveIntegerOperand(
+      match.group(2)!,
+      variables,
+    );
+
+    if (leftValue == null || rightValue == null) {
+      return null;
+    }
+
+    return leftValue + rightValue;
+  }
+
+  int? _resolveIntegerOperand(
+    String operand,
+    Map<String, int> variables,
+  ) {
+    return int.tryParse(operand) ?? variables[operand];
   }
 
   String _convertEscapeSequences(String text) {

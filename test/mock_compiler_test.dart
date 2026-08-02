@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:student_c_studio/services/mock_compiler.dart';
+import 'package:student_c_studio/models/compiler_result.dart';
 
 void main() {
   group('MockCompiler integration tests', () {
@@ -27,7 +28,7 @@ int main()
       );
     });
     test('detects empty expression through compiler pipeline', () {
-  const code = '''
+      const code = '''
 int main()
 {
   int a;
@@ -35,22 +36,22 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Expression expected after '='.",
-  );
-  expect(result.errorLine, 4);
-  expect(
-    result.banglaExplanation,
-    "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
-  );
-});
-test('detects invalid identifier through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Expression expected after '='.",
+      );
+      expect(result.errorLine, 4);
+      expect(
+        result.banglaExplanation,
+        "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
+      );
+    });
+    test('detects invalid identifier through compiler pipeline', () {
+      const code = '''
 int main()
 {
   int 2number;
@@ -58,23 +59,24 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "invalid variable name '2number'",
-  );
-  expect(result.errorLine, 3);
-  expect(
-    result.banglaExplanation,
-    'চলকের নাম অক্ষর বা underscore দিয়ে শুরু হবে; '
-    'পরে অক্ষর, সংখ্যা বা underscore থাকতে পারে।',
-  );
-});
-test('detects reserved keyword as variable name through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "invalid variable name '2number'",
+      );
+      expect(result.errorLine, 3);
+      expect(
+        result.banglaExplanation,
+        'চলকের নাম অক্ষর বা underscore দিয়ে শুরু হবে; '
+        'পরে অক্ষর, সংখ্যা বা underscore থাকতে পারে।',
+      );
+    });
+    test('detects reserved keyword as variable name through compiler pipeline',
+        () {
+      const code = '''
 int main()
 {
   int for;
@@ -82,16 +84,17 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.errorLine, 3);
-  expect(result.error, contains('for'));
-  expect(result.banglaExplanation, isNotEmpty);
-});
-test('detects invalid character in identifier through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.errorLine, 3);
+      expect(result.error, contains('for'));
+      expect(result.banglaExplanation, isNotEmpty);
+    });
+    test('detects invalid character in identifier through compiler pipeline',
+        () {
+      const code = '''
 int main()
 {
   int student-name;
@@ -99,16 +102,16 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.errorLine, 3);
-  expect(result.error, contains('student-name'));
-  expect(result.banglaExplanation, isNotEmpty);
-});
-test('detects invalid for loop through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.errorLine, 3);
+      expect(result.error, contains('student-name'));
+      expect(result.banglaExplanation, isNotEmpty);
+    });
+    test('detects invalid for loop through compiler pipeline', () {
+      const code = '''
 int main()
 {
   int i;
@@ -120,23 +123,23 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'A for loop must contain exactly two semicolons.',
-  );
-  expect(result.errorLine, 4);
-  expect(
-    result.banglaExplanation,
-    'for লুপের বন্ধনীর ভেতরে initialization, condition এবং update—'
-    'এই তিনটি অংশ আলাদা করার জন্য ঠিক দুটি সেমিকোলন দিতে হবে।',
-  );
-});
-test('detects invalid if condition through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'A for loop must contain exactly two semicolons.',
+      );
+      expect(result.errorLine, 4);
+      expect(
+        result.banglaExplanation,
+        'for লুপের বন্ধনীর ভেতরে initialization, condition এবং update—'
+        'এই তিনটি অংশ আলাদা করার জন্য ঠিক দুটি সেমিকোলন দিতে হবে।',
+      );
+    });
+    test('detects invalid if condition through compiler pipeline', () {
+      const code = '''
 int main()
 {
   int a = 10;
@@ -150,22 +153,22 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'Invalid if condition.',
-  );
-  expect(result.errorLine, 5);
-  expect(
-    result.banglaExplanation,
-    'if-এর condition-টি সম্পূর্ণ ও বৈধ expression হতে হবে।',
-  );
-});
-test('detects invalid switch statement through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'Invalid if condition.',
+      );
+      expect(result.errorLine, 5);
+      expect(
+        result.banglaExplanation,
+        'if-এর condition-টি সম্পূর্ণ ও বৈধ expression হতে হবে।',
+      );
+    });
+    test('detects invalid switch statement through compiler pipeline', () {
+      const code = '''
 int main()
 {
   int choice = 1;
@@ -181,22 +184,22 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'Switch expression cannot be empty.',
-  );
-  expect(result.errorLine, 5);
-  expect(
-    result.banglaExplanation,
-    'switch-এর বন্ধনীর ভেতরে একটি ভেরিয়েবল বা expression লিখতে হবে।',
-  );
-});
-test('detects invalid while condition through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'Switch expression cannot be empty.',
+      );
+      expect(result.errorLine, 5);
+      expect(
+        result.banglaExplanation,
+        'switch-এর বন্ধনীর ভেতরে একটি ভেরিয়েবল বা expression লিখতে হবে।',
+      );
+    });
+    test('detects invalid while condition through compiler pipeline', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -212,14 +215,14 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.error, 'Invalid while condition.');
-  expect(result.errorLine, 7);
-});
-test('detects invalid do while through compiler pipeline', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.error, 'Invalid while condition.');
+      expect(result.errorLine, 7);
+    });
+    test('detects invalid do while through compiler pipeline', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -234,17 +237,17 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'Missing semicolon after do-while statement.',
-  );
-  expect(result.errorLine, 9);
-});
-test('detects break outside loop', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'Missing semicolon after do-while statement.',
+      );
+      expect(result.errorLine, 9);
+    });
+    test('detects break outside loop', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -255,16 +258,16 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'break statement is not inside a loop or switch.',
-  );
-});
-test('detects continue outside loop', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'break statement is not inside a loop or switch.',
+      );
+    });
+    test('detects continue outside loop', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -275,16 +278,16 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'continue statement is not inside a loop.',
-  );
-});
-test('detects undefined goto label', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'continue statement is not inside a loop.',
+      );
+    });
+    test('detects undefined goto label', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -295,13 +298,13 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.error, 'Undefined label: unknown.');
-});
-test('detects duplicate label', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.error, 'Undefined label: unknown.');
+    });
+    test('detects duplicate label', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -316,13 +319,13 @@ level:
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.error, 'Duplicate label: level.');
-});
-test('accepts valid goto', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.error, 'Duplicate label: level.');
+    });
+    test('accepts valid goto', () {
+      const code = '''
 #include<stdio.h>
 
 int main()
@@ -336,17 +339,16 @@ start:
 }
 ''';
 
-  final result = MockCompiler().compile(code);
-  
+      final result = MockCompiler().compile(code);
 
-  expect(
-  result.isSuccess,
-  isTrue,
-  reason: result.displayText,
-);
-});
-test('ignores printf inside comment when checking headers', () {
-  const code = '''
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason: result.displayText,
+      );
+    });
+    test('ignores printf inside comment when checking headers', () {
+      const code = '''
 int main()
 {
   // printf("This is only a comment");
@@ -354,16 +356,16 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(
-    result.isSuccess,
-    isTrue,
-    reason: result.displayText,
-  );
-});
-test('does not accept a commented-out stdio header', () {
-  const code = '''
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason: result.displayText,
+      );
+    });
+    test('does not accept a commented-out stdio header', () {
+      const code = '''
 // #include<stdio.h>
 
 int main()
@@ -373,14 +375,14 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(result.error, "Missing header file 'stdio.h'.");
-  expect(result.errorLine, 5);
-});
-test('ignores quote brace and parenthesis inside comments', () {
-  const code = '''
+      expect(result.isSuccess, isFalse);
+      expect(result.error, "Missing header file 'stdio.h'.");
+      expect(result.errorLine, 5);
+    });
+    test('ignores quote brace and parenthesis inside comments', () {
+      const code = '''
 int main()
 {
   // don't treat this ( or { as code
@@ -389,16 +391,16 @@ int main()
 }
 ''';
 
-  final result = MockCompiler().compile(code);
+      final result = MockCompiler().compile(code);
 
-  expect(
-    result.isSuccess,
-    isTrue,
-    reason: result.displayText,
-  );
-});
-test('preserves leading blank lines in error line number', () {
-  const code = '''
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason: result.displayText,
+      );
+    });
+    test('preserves leading blank lines in error line number', () {
+      const code = '''
 
 
 int main()
@@ -408,17 +410,108 @@ int main()
 }
 ''';
 
-  const compiler = MockCompiler();
-  final result = compiler.compile(code);
+      const compiler = MockCompiler();
+      final result = compiler.compile(code);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    'Empty parenthesis is not allowed.',
-  );
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        'Empty parenthesis is not allowed.',
+      );
 
-  expect(result.errorLine, 6);
-});
+      expect(result.errorLine, 6);
+    });
+    test('prints plain text from printf', () {
+      const String code = '''
+#include<stdio.h>
 
+int main()
+{
+    printf("Hello, Student C Studio");
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, 'Hello, Student C Studio');
+    });
+    test('prints integer literal from printf', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    printf("%d", 10);
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, '10');
+    });
+    test('prints multiple printf statements', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    printf("A");
+    printf("B");
+    printf("C");
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, 'ABC');
+    });
+    test('prints integer variable from printf', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 25;
+    printf("%d", a);
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, '25');
+    });
+    test('prints arithmetic expression from printf', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 10;
+    int b = 5;
+
+    printf("%d", a + b);
+
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(code);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, '15');
+    });
   });
 }
