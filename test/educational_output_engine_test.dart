@@ -137,5 +137,113 @@ printf("%d", a);
         '3',
       );
     });
+    test('supports simple if statement', () {
+      const String code = '''
+int a = 10;
+
+if (a > 5)
+{
+    printf("OK");
+}
+''';
+
+      expect(
+        engine.execute(code),
+        'OK',
+      );
+    });
+    test('skips if body when condition is false', () {
+      const String code = '''
+int a = 2;
+
+if (a > 5)
+{
+    printf("OK");
+}
+''';
+
+      expect(
+        engine.execute(code),
+        '',
+      );
+    });
+    test('executes if body only when condition is true', () {
+      const String code = '''
+int a = 10;
+
+if (a > 5)
+{
+    printf("YES");
+}
+
+printf("END");
+''';
+
+      expect(
+        engine.execute(code),
+        'YESEND',
+      );
+    });
+    test('executes else body when if condition is false', () {
+      const String code = '''
+int a = 2;
+
+if (a > 5)
+{
+    printf("YES");
+}
+else
+{
+    printf("NO");
+}
+''';
+
+      expect(
+        engine.execute(code),
+        'NO',
+      );
+    });
+    test('executes only one branch of if else', () {
+      const String code = '''
+int a = 2;
+
+if (a > 5)
+{
+    printf("YES");
+}
+else
+{
+    printf("NO");
+}
+
+printf("END");
+''';
+
+      expect(
+        engine.execute(code),
+        'NOEND',
+      );
+    });
+    test('executes true branch instead of else', () {
+      const String code = '''
+int a = 10;
+
+if (a > 5)
+{
+    printf("YES");
+}
+else
+{
+    printf("NO");
+}
+
+printf("END");
+''';
+
+      expect(
+        engine.execute(code),
+        'YESEND',
+      );
+    });
   });
 }

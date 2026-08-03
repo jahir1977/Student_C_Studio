@@ -8,10 +8,15 @@ class EducationalOutputEngine {
       integerVariables,
     );
     _applyCompoundAssignments(
-    code,
-    integerVariables,
+      code,
+      integerVariables,
     );
     _applyIncrementDecrement(
+      code,
+      integerVariables,
+    );
+
+    code = _filterFalseIfBlocks(
       code,
       integerVariables,
     );
@@ -25,7 +30,7 @@ class EducationalOutputEngine {
     final Iterable<RegExpMatch> matches = printfPattern.allMatches(code);
 
     if (matches.isEmpty) {
-      return 'Program executed successfully.';
+      return '';
     }
 
     final StringBuffer output = StringBuffer();
@@ -101,58 +106,59 @@ class EducationalOutputEngine {
       }
     }
   }
+
   void _applyCompoundAssignments(
-  String code,
-  Map<String, int> variables,
-) {
-  final RegExp pattern = RegExp(
-    r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*([+\-*/%])=\s*([^;]+)\s*;',
-    multiLine: true,
-  );
-
-  for (final RegExpMatch match in pattern.allMatches(code)) {
-    final String variableName = match.group(1)!;
-    final String operator = match.group(2)!;
-    final String expression = match.group(3)!;
-
-    final int? currentValue = variables[variableName];
-
-    if (currentValue == null) {
-      continue;
-    }
-
-    final int? value = _evaluateIntegerExpression(
-      expression,
-      variables,
+    String code,
+    Map<String, int> variables,
+  ) {
+    final RegExp pattern = RegExp(
+      r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*([+\-*/%])=\s*([^;]+)\s*;',
+      multiLine: true,
     );
 
-    if (value == null) {
-      continue;
-    }
+    for (final RegExpMatch match in pattern.allMatches(code)) {
+      final String variableName = match.group(1)!;
+      final String operator = match.group(2)!;
+      final String expression = match.group(3)!;
 
-    switch (operator) {
-      case '+':
-        variables[variableName] = currentValue + value;
-        break;
-      case '-':
-        variables[variableName] = currentValue - value;
-        break;
-      case '*':
-        variables[variableName] = currentValue * value;
-        break;
-      case '/':
-        if (value != 0) {
-          variables[variableName] = currentValue ~/ value;
-        }
-        break;
-      case '%':
-        if (value != 0) {
-          variables[variableName] = currentValue % value;
-        }
-        break;
+      final int? currentValue = variables[variableName];
+
+      if (currentValue == null) {
+        continue;
+      }
+
+      final int? value = _evaluateIntegerExpression(
+        expression,
+        variables,
+      );
+
+      if (value == null) {
+        continue;
+      }
+
+      switch (operator) {
+        case '+':
+          variables[variableName] = currentValue + value;
+          break;
+        case '-':
+          variables[variableName] = currentValue - value;
+          break;
+        case '*':
+          variables[variableName] = currentValue * value;
+          break;
+        case '/':
+          if (value != 0) {
+            variables[variableName] = currentValue ~/ value;
+          }
+          break;
+        case '%':
+          if (value != 0) {
+            variables[variableName] = currentValue % value;
+          }
+          break;
+      }
     }
   }
-}
 
   void _applyIncrementDecrement(
     String code,
@@ -194,6 +200,83 @@ class EducationalOutputEngine {
       variables[variableName] =
           operator == '++' ? currentValue + 1 : currentValue - 1;
     }
+  }
+
+  String _filterFalseIfBlocks(
+    String code,
+    Map<String, int> variables,
+  ) {
+    bool evaluateCondition(
+      String variable,
+      String operator,
+      int value,
+    ) {
+      final int? current = variables[variable];
+
+      if (current == null) {
+        return false;
+      }
+
+      switch (operator) {
+        case '>':
+          return current > value;
+        case '<':
+          return current < value;
+        case '>=':
+          return current >= value;
+        case '<=':
+          return current <= value;
+        case '==':
+          return current == value;
+        case '!=':
+          return current != value;
+        default:
+          return false;
+      }
+    }
+
+    final RegExp ifElsePattern = RegExp(
+      r'if\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*'
+      r'(==|!=|>=|<=|>|<)\s*(-?\d+)\s*\)\s*'
+      r'\{([\s\S]*?)\}\s*else\s*\{([\s\S]*?)\}',
+      multiLine: true,
+    );
+
+    String filteredCode = code.replaceAllMapped(
+      ifElsePattern,
+      (Match match) {
+        final String variable = match.group(1)!;
+        final String operator = match.group(2)!;
+        final int value = int.parse(match.group(3)!);
+        final String trueBody = match.group(4)!;
+        final String falseBody = match.group(5)!;
+
+        return evaluateCondition(variable, operator, value)
+            ? trueBody
+            : falseBody;
+      },
+    );
+
+    final RegExp ifPattern = RegExp(
+      r'if\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*'
+      r'(==|!=|>=|<=|>|<)\s*(-?\d+)\s*\)\s*'
+      r'\{([\s\S]*?)\}',
+      multiLine: true,
+    );
+
+    filteredCode = filteredCode.replaceAllMapped(
+      ifPattern,
+      (Match match) {
+        final String variable = match.group(1)!;
+        final String operator = match.group(2)!;
+        final int value = int.parse(match.group(3)!);
+        final String body = match.group(4)!;
+
+        return evaluateCondition(variable, operator, value) ? body : '';
+      },
+    );
+
+    return filteredCode;
   }
 
   int? _evaluateIntegerExpression(
