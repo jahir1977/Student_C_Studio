@@ -7,6 +7,10 @@ class EducationalOutputEngine {
       code,
       integerVariables,
     );
+    _applyCompoundAssignments(
+    code,
+    integerVariables,
+    );
     _applyIncrementDecrement(
       code,
       integerVariables,
@@ -97,11 +101,81 @@ class EducationalOutputEngine {
       }
     }
   }
+  void _applyCompoundAssignments(
+  String code,
+  Map<String, int> variables,
+) {
+  final RegExp pattern = RegExp(
+    r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*([+\-*/%])=\s*([^;]+)\s*;',
+    multiLine: true,
+  );
+
+  for (final RegExpMatch match in pattern.allMatches(code)) {
+    final String variableName = match.group(1)!;
+    final String operator = match.group(2)!;
+    final String expression = match.group(3)!;
+
+    final int? currentValue = variables[variableName];
+
+    if (currentValue == null) {
+      continue;
+    }
+
+    final int? value = _evaluateIntegerExpression(
+      expression,
+      variables,
+    );
+
+    if (value == null) {
+      continue;
+    }
+
+    switch (operator) {
+      case '+':
+        variables[variableName] = currentValue + value;
+        break;
+      case '-':
+        variables[variableName] = currentValue - value;
+        break;
+      case '*':
+        variables[variableName] = currentValue * value;
+        break;
+      case '/':
+        if (value != 0) {
+          variables[variableName] = currentValue ~/ value;
+        }
+        break;
+      case '%':
+        if (value != 0) {
+          variables[variableName] = currentValue % value;
+        }
+        break;
+    }
+  }
+}
 
   void _applyIncrementDecrement(
     String code,
     Map<String, int> variables,
   ) {
+    final RegExp prefixPattern = RegExp(
+      r'^\s*(\+\+|--)\s*([A-Za-z_][A-Za-z0-9_]*)\s*;',
+      multiLine: true,
+    );
+
+    for (final RegExpMatch match in prefixPattern.allMatches(code)) {
+      final String operator = match.group(1)!;
+      final String variableName = match.group(2)!;
+
+      final int? currentValue = variables[variableName];
+
+      if (currentValue == null) {
+        continue;
+      }
+
+      variables[variableName] =
+          operator == '++' ? currentValue + 1 : currentValue - 1;
+    }
     final RegExp postfixPattern = RegExp(
       r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\+\+|--)\s*;',
       multiLine: true,
