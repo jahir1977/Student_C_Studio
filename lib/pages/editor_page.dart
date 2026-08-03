@@ -26,7 +26,13 @@ int main()
     text: _sampleCode,
   );
 
+  final TextEditingController _inputController = TextEditingController();
+
+  final List<String> _inputValues = <String>[];
+
   final ScrollController _editorScrollController = ScrollController();
+
+  final FocusNode _inputFocusNode = FocusNode();
 
   final MockCompiler _compiler = const MockCompiler();
 
@@ -45,17 +51,33 @@ int main()
     super.initState();
 
     _updateLineCount();
-
-    _codeController.addListener(_updateLineCount);
+    _codeController.addListener(_handleCodeChanged);
   }
 
   @override
   void dispose() {
-    _codeController.removeListener(_updateLineCount);
+    _codeController.removeListener(_handleCodeChanged);
     _codeController.dispose();
+    _inputController.dispose();
     _editorScrollController.dispose();
+    _inputFocusNode.dispose();
 
     super.dispose();
+  }
+
+  void _handleCodeChanged() {
+    _updateLineCount();
+
+    final int requiredCount = _requiredInputCount();
+
+    if (_inputValues.length > requiredCount) {
+      setState(() {
+        _inputValues.removeRange(
+          requiredCount,
+          _inputValues.length,
+        );
+      });
+    }
   }
 
   void _updateLineCount() {
@@ -66,6 +88,260 @@ int main()
         _lineCount = newLineCount;
       });
     }
+  }
+
+  List<_ScanfInputType> _requiredInputTypes() {
+    final RegExp scanfPattern = RegExp(
+      r'scanf\s*\(\s*"((?:\\.|[^"\\])*)"',
+      multiLine: true,
+    );
+
+    final List<_ScanfInputType> inputTypes = <_ScanfInputType>[];
+
+    for (final RegExpMatch match
+        in scanfPattern.allMatches(_codeController.text)) {
+      final String format = match.group(1) ?? '';
+
+      int index = 0;
+
+      while (index < format.length) {
+        if (format[index] != '%') {
+          index++;
+          continue;
+        }
+
+        if (index + 1 < format.length && format[index + 1] == '%') {
+          index += 2;
+          continue;
+        }
+
+        int specifierIndex = index + 1;
+
+        while (specifierIndex < format.length &&
+            RegExp(r'[-+ #0-9.*]').hasMatch(
+              format[specifierIndex],
+            )) {
+          specifierIndex++;
+        }
+
+        if (specifierIndex >= format.length) {
+          break;
+        }
+
+        if (format.startsWith('lf', specifierIndex)) {
+          inputTypes.add(_ScanfInputType.doubleValue);
+          index = specifierIndex + 2;
+          continue;
+        }
+
+        final String specifier = format[specifierIndex];
+
+        switch (specifier) {
+          case 'd':
+          case 'i':
+            inputTypes.add(_ScanfInputType.integer);
+            break;
+          case 'u':
+            inputTypes.add(_ScanfInputType.unsignedInteger);
+            break;
+          case 'f':
+            inputTypes.add(_ScanfInputType.floatValue);
+            break;
+          case 'c':
+            inputTypes.add(_ScanfInputType.character);
+            break;
+          case 's':
+            inputTypes.add(_ScanfInputType.stringValue);
+            break;
+        }
+
+        index = specifierIndex + 1;
+      }
+    }
+
+    return inputTypes;
+  }
+
+  int _requiredInputCount() {
+    return _requiredInputTypes().length;
+  }
+
+  void _submitInputValue(String value) {
+    final List<_ScanfInputType> requiredTypes = _requiredInputTypes();
+
+    if (_inputValues.length >= requiredTypes.length) {
+      return;
+    }
+
+    final _ScanfInputType expectedType = requiredTypes[_inputValues.length];
+
+    final String normalizedValue = value.trim();
+
+    final String? validationError = _validateInputValue(
+      normalizedValue,
+      expectedType,
+    );
+
+    if (validationError != null) {
+      _showInputMessage(validationError);
+      return;
+    }
+
+    setState(() {
+      _inputValues.add(normalizedValue);
+      _inputController.clear();
+    });
+
+    if (_inputValues.length >= requiredTypes.length) {
+      _inputFocusNode.unfocus();
+    } else {
+      _inputFocusNode.requestFocus();
+    }
+  }
+
+  String? _validateInputValue(
+    String value,
+    _ScanfInputType expectedType,
+  ) {
+    switch (expectedType) {
+      case _ScanfInputType.integer:
+        if (!RegExp(r'^[-+]?\d+$').hasMatch(value)) {
+          return 'পূর্ণসংখ্যা লিখে Enter চাপুন।';
+        }
+        return null;
+
+      case _ScanfInputType.unsignedInteger:
+        if (!RegExp(r'^\+?\d+$').hasMatch(value)) {
+          return 'ঋণাত্মক নয় এমন পূর্ণসংখ্যা লিখে Enter চাপুন।';
+        }
+        return null;
+
+      case _ScanfInputType.floatValue:
+      case _ScanfInputType.doubleValue:
+        if (!RegExp(
+          r'^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$',
+        ).hasMatch(value)) {
+          return 'দশমিক বা পূর্ণসংখ্যা লিখে Enter চাপুন।';
+        }
+        return null;
+
+      case _ScanfInputType.character:
+        if (value.runes.length != 1) {
+          return 'একটি মাত্র অক্ষর লিখে Enter চাপুন।';
+        }
+        return null;
+
+      case _ScanfInputType.stringValue:
+        if (value.isEmpty) {
+          return 'একটি শব্দ লিখে Enter চাপুন।';
+        }
+
+        if (RegExp(r'\s').hasMatch(value)) {
+          return '%s-এর জন্য স্পেস ছাড়া একটি শব্দ লিখুন।';
+        }
+
+        return null;
+    }
+  }
+
+  TextInputType _keyboardTypeFor(
+    _ScanfInputType? inputType,
+  ) {
+    switch (inputType) {
+      case _ScanfInputType.integer:
+        return const TextInputType.numberWithOptions(
+          signed: true,
+          decimal: false,
+        );
+
+      case _ScanfInputType.unsignedInteger:
+        return const TextInputType.numberWithOptions(
+          signed: false,
+          decimal: false,
+        );
+
+      case _ScanfInputType.floatValue:
+      case _ScanfInputType.doubleValue:
+        return const TextInputType.numberWithOptions(
+          signed: true,
+          decimal: true,
+        );
+
+      case _ScanfInputType.character:
+      case _ScanfInputType.stringValue:
+      case null:
+        return TextInputType.text;
+    }
+  }
+
+  String _inputHintFor(
+    _ScanfInputType inputType,
+    int inputNumber,
+  ) {
+    final String typeLabel;
+
+    switch (inputType) {
+      case _ScanfInputType.integer:
+        typeLabel = 'পূর্ণসংখ্যা';
+        break;
+      case _ScanfInputType.unsignedInteger:
+        typeLabel = 'ধনাত্মক পূর্ণসংখ্যা';
+        break;
+      case _ScanfInputType.floatValue:
+        typeLabel = 'float সংখ্যা';
+        break;
+      case _ScanfInputType.doubleValue:
+        typeLabel = 'double সংখ্যা';
+        break;
+      case _ScanfInputType.character:
+        typeLabel = 'একটি অক্ষর';
+        break;
+      case _ScanfInputType.stringValue:
+        typeLabel = 'একটি শব্দ';
+        break;
+    }
+
+    return '$inputNumber নম্বর $typeLabel লিখে Enter চাপুন';
+  }
+
+  String _formatLabelFor(_ScanfInputType inputType) {
+    switch (inputType) {
+      case _ScanfInputType.integer:
+        return '%d';
+      case _ScanfInputType.unsignedInteger:
+        return '%u';
+      case _ScanfInputType.floatValue:
+        return '%f';
+      case _ScanfInputType.doubleValue:
+        return '%lf';
+      case _ScanfInputType.character:
+        return '%c';
+      case _ScanfInputType.stringValue:
+        return '%s';
+    }
+  }
+
+  void _removeLastInputValue() {
+    if (_inputValues.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _inputValues.removeLast();
+    });
+
+    _inputFocusNode.requestFocus();
+  }
+
+  void _showInputMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   Future<void> _runProgram() async {
@@ -81,7 +357,10 @@ int main()
       const Duration(milliseconds: 350),
     );
 
-    final CompilerResult result = _compiler.compile(_codeController.text);
+    final CompilerResult result = _compiler.compile(
+      _codeController.text,
+      input: _inputValues.join('\n'),
+    );
 
     final String explanation = result.banglaExplanation.trim().isNotEmpty
         ? result.banglaExplanation
@@ -101,6 +380,8 @@ int main()
   void _newProgram() {
     setState(() {
       _codeController.clear();
+      _inputController.clear();
+      _inputValues.clear();
       _result = null;
       _banglaExplanation = 'নতুন Program লেখা শুরু করুন।';
     });
@@ -121,22 +402,34 @@ int main()
 
     setState(() {
       _codeController.text = selectedCode;
-
       _codeController.selection = TextSelection.collapsed(
         offset: _codeController.text.length,
       );
 
+      _inputController.clear();
+      _inputValues.clear();
       _result = null;
-      _banglaExplanation =
-          'Sample Program লোড হয়েছে। কোড পরিবর্তন করে Run করতে পারবেন।';
+      _banglaExplanation = 'Sample Program লোড হয়েছে। '
+          'কোড পরিবর্তন করে Run করতে পারবেন।';
     });
   }
 
   void _clearOutput() {
     setState(() {
       _result = null;
-      _banglaExplanation = 'Output পরিষ্কার করা হয়েছে।';
+      _banglaExplanation = 'Output পরিষ্কার করা হয়েছে।';
     });
+  }
+
+  void _clearInput() {
+    setState(() {
+      _inputController.clear();
+      _inputValues.clear();
+    });
+
+    if (_requiredInputCount() > 0) {
+      _inputFocusNode.requestFocus();
+    }
   }
 
   @override
@@ -183,7 +476,9 @@ int main()
           IconButton(
             tooltip: 'Clear Output',
             onPressed: _clearOutput,
-            icon: const Icon(Icons.cleaning_services_outlined),
+            icon: const Icon(
+              Icons.cleaning_services_outlined,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -223,6 +518,11 @@ int main()
             flex: 2,
             child: Column(
               children: [
+                SizedBox(
+                  height: 165,
+                  child: _buildInputSection(),
+                ),
+                const SizedBox(height: 16),
                 Expanded(
                   child: _buildOutputSection(),
                 ),
@@ -249,6 +549,11 @@ int main()
           ),
           const SizedBox(height: 12),
           SizedBox(
+            height: 165,
+            child: _buildInputSection(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
             height: 220,
             child: _buildOutputSection(),
           ),
@@ -266,6 +571,7 @@ int main()
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -297,7 +603,7 @@ int main()
                       keyboardType: TextInputType.multiline,
                       textAlignVertical: TextAlignVertical.top,
                       cursorColor: Colors.white,
-                      style: GoogleFonts.firaCode(
+                      style: GoogleFonts.robotoMono(
                         fontSize: 16,
                         height: 1.6,
                         color: const Color(0xFFD4D4D4),
@@ -306,7 +612,7 @@ int main()
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(16),
                         hintText: 'এখানে C Program লিখুন...',
-                        hintStyle: GoogleFonts.firaCode(
+                        hintStyle: GoogleFonts.robotoMono(
                           color: Colors.white38,
                           fontSize: 15,
                         ),
@@ -343,7 +649,7 @@ int main()
                 height: 25.6,
                 child: Text(
                   '${index + 1}',
-                  style: GoogleFonts.firaCode(
+                  style: GoogleFonts.robotoMono(
                     fontSize: 14,
                     height: 1.6,
                     color: Colors.white38,
@@ -367,7 +673,9 @@ int main()
         children: [
           OutlinedButton.icon(
             onPressed: _newProgram,
-            icon: const Icon(Icons.note_add_outlined),
+            icon: const Icon(
+              Icons.note_add_outlined,
+            ),
             label: const Text('New Program'),
           ),
           OutlinedButton.icon(
@@ -395,11 +703,153 @@ int main()
     );
   }
 
+  Widget _buildInputSection() {
+    final List<_ScanfInputType> requiredTypes = _requiredInputTypes();
+
+    final int requiredCount = requiredTypes.length;
+    final int enteredCount = _inputValues.length;
+    final bool inputComplete =
+        requiredCount > 0 && enteredCount >= requiredCount;
+    final bool inputEnabled = requiredCount > 0 && !inputComplete;
+
+    final _ScanfInputType? nextInputType =
+        inputEnabled ? requiredTypes[enteredCount] : null;
+
+    return Card(
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildPanelHeader(
+            icon: Icons.keyboard_outlined,
+            iconColor: Colors.teal,
+            title: 'Program Input (stdin)',
+            trailing: '$enteredCount / $requiredCount',
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Container(
+              color: const Color(0xFFF8FAFC),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_inputValues.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: List<Widget>.generate(
+                          _inputValues.length,
+                          (int index) {
+                            return Chip(
+                              label: Text(
+                                '${index + 1} '
+                                '(${_formatLabelFor(requiredTypes[index])}): '
+                                '${_inputValues[index]}',
+                                style: GoogleFonts.robotoMono(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: TextField(
+                      controller: _inputController,
+                      focusNode: _inputFocusNode,
+                      enabled: inputEnabled,
+                      readOnly: !inputEnabled,
+                      maxLines: 1,
+                      keyboardType: _keyboardTypeFor(
+                        nextInputType,
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: _submitInputValue,
+                      cursorColor: Theme.of(context).colorScheme.primary,
+                      mouseCursor: inputEnabled
+                          ? SystemMouseCursors.text
+                          : SystemMouseCursors.basic,
+                      style: GoogleFonts.robotoMono(
+                        fontSize: 16,
+                        height: 1.4,
+                        color: const Color(0xFF111827),
+                      ),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor:
+                            inputEnabled ? Colors.white : Colors.grey.shade200,
+                        isDense: true,
+                        hintText: requiredCount == 0
+                            ? 'Program-এ scanf() নেই'
+                            : inputComplete
+                                ? 'সব ইনপুট নেওয়া সম্পন্ন'
+                                : _inputHintFor(
+                                    nextInputType!,
+                                    enteredCount + 1,
+                                  ),
+                        hintStyle: GoogleFonts.robotoMono(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: inputComplete
+                                ? Colors.green
+                                : Colors.grey.shade400,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_inputValues.isNotEmpty)
+                              IconButton(
+                                tooltip: 'Remove Last Value',
+                                onPressed: _removeLastInputValue,
+                                icon: const Icon(Icons.undo),
+                              ),
+                            IconButton(
+                              tooltip: 'Clear Input',
+                              onPressed: _clearInput,
+                              icon: const Icon(Icons.clear),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOutputSection() {
     final CompilerResult? result = _result;
-
     final bool hasResult = result != null;
-
     final bool isSuccess = result?.isSuccess ?? true;
 
     final String title = !hasResult
@@ -427,6 +877,7 @@ int main()
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -449,7 +900,7 @@ int main()
               child: SingleChildScrollView(
                 child: SelectableText(
                   content,
-                  style: GoogleFonts.firaCode(
+                  style: GoogleFonts.robotoMono(
                     fontSize: 15,
                     height: 1.6,
                     color: hasResult
@@ -471,6 +922,7 @@ int main()
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -615,4 +1067,13 @@ int main()
       ),
     );
   }
+}
+
+enum _ScanfInputType {
+  integer,
+  unsignedInteger,
+  floatValue,
+  doubleValue,
+  character,
+  stringValue,
 }

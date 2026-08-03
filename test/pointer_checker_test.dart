@@ -518,4 +518,45 @@ void main() {
       expect(result.isSuccess, true);
     });
   });
+
+  group('PointerChecker - scanf multiple arguments', () {
+    test('accepts multiple ordinary variables with address operators', () {
+      final code = _program('''
+  int a = 0;
+  int b = 0;
+  scanf("%d %d", &a, &b);
+''');
+
+      final result = PointerChecker.check(code);
+
+      expect(result.isSuccess, true);
+    });
+
+    test('detects undeclared variable among multiple scanf arguments', () {
+      final code = _program('''
+  int a = 0;
+  scanf("%d %d", &a, &b);
+''');
+
+      final result = PointerChecker.check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'Addressed variable is not declared.');
+      expect(result.errorLine, 6);
+    });
+
+    test('detects ampersand before pointer among multiple scanf arguments', () {
+      final code = _program('''
+  int a = 0;
+  int *ptr;
+  scanf("%d %d", &a, &ptr);
+''');
+
+      final result = PointerChecker.check(code);
+
+      expect(result.isSuccess, false);
+      expect(result.error, 'Do not use & before a pointer in scanf.');
+      expect(result.errorLine, 7);
+    });
+  });
 }

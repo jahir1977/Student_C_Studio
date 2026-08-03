@@ -13,9 +13,11 @@ class ExpressionChecker implements CompilerChecker {
     final lines = sourceCode.split('\n');
 
     for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+      final rawLine = lines[i].trim();
 
-      if (line.isEmpty) continue;
+      if (rawLine.isEmpty) continue;
+
+      final line = _maskQuotedLiterals(rawLine);
 
       final emptyRightSideMatch = RegExp(r'=\s*;$').firstMatch(line);
 
@@ -144,6 +146,50 @@ class ExpressionChecker implements CompilerChecker {
       output: '',
       explanation: 'Expression is valid.',
     );
+  }
+
+  String _maskQuotedLiterals(String line) {
+    final StringBuffer masked = StringBuffer();
+
+    bool insideDoubleQuote = false;
+    bool insideSingleQuote = false;
+    bool escaped = false;
+
+    for (int i = 0; i < line.length; i++) {
+      final String character = line[i];
+
+      if (escaped) {
+        masked.write(insideDoubleQuote || insideSingleQuote ? ' ' : character);
+        escaped = false;
+        continue;
+      }
+
+      if ((insideDoubleQuote || insideSingleQuote) && character == r'\') {
+        masked.write(' ');
+        escaped = true;
+        continue;
+      }
+
+      if (!insideSingleQuote && character == '"') {
+        insideDoubleQuote = !insideDoubleQuote;
+        masked.write(character);
+        continue;
+      }
+
+      if (!insideDoubleQuote && character == "'") {
+        insideSingleQuote = !insideSingleQuote;
+        masked.write(character);
+        continue;
+      }
+
+      if (insideDoubleQuote || insideSingleQuote) {
+        masked.write(' ');
+      } else {
+        masked.write(character);
+      }
+    }
+
+    return masked.toString();
   }
 
   CompilerResult _checkTernaryOperators(String sourceCode) {

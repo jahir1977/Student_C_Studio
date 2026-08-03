@@ -108,126 +108,150 @@ a = 10 + 5);
       );
     });
     test('accepts a valid expression', () {
-  const sourceCode = '''
+      const sourceCode = '''
 int a;
 a = (10 + 5) * 2;
 ''';
-        final checker = ExpressionChecker();
-        final result = checker.check(sourceCode);
-            expect(result.isSuccess, isTrue);
-            expect(result.error, '');
-});
-test('detects empty right side of assignment', () {
-  const sourceCode = '''
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
+      expect(result.isSuccess, isTrue);
+      expect(result.error, '');
+    });
+    test('detects empty right side of assignment', () {
+      const sourceCode = '''
 int a;
 a = ;
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Expression expected after '='.",
-  );
-  expect(result.errorLine, 2);
-  expect(
-    result.banglaExplanation,
-    "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
-  );
-});
-test('detects missing operator between operands', () {
-  const sourceCode = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Expression expected after '='.",
+      );
+      expect(result.errorLine, 2);
+      expect(
+        result.banglaExplanation,
+        "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
+      );
+    });
+    test('detects missing operator between operands', () {
+      const sourceCode = '''
 int a;
 a = 10 5;
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Operator expected between operands.",
-  );
-  expect(result.errorLine, 2);
-  expect(
-    result.banglaExplanation,
-    "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
-  );
-});
-test('detects operator before closing parenthesis', () {
-  const sourceCode = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Operator expected between operands.",
+      );
+      expect(result.errorLine, 2);
+      expect(
+        result.banglaExplanation,
+        "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
+      );
+    });
+    test('detects operator before closing parenthesis', () {
+      const sourceCode = '''
 int a;
 a = (10 + );
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Expression is incomplete before closing parenthesis.",
-  );
-  expect(result.errorLine, 2);
-  expect(
-    result.banglaExplanation,
-    "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
-  );
-});
-test('detects operator immediately after opening parenthesis', () {
-  const sourceCode = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Expression is incomplete before closing parenthesis.",
+      );
+      expect(result.errorLine, 2);
+      expect(
+        result.banglaExplanation,
+        "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
+      );
+    });
+    test('detects operator immediately after opening parenthesis', () {
+      const sourceCode = '''
 int a;
 a = (*10);
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Expression cannot start with operator after '('.",
-  );
-  expect(result.errorLine, 2);
-  expect(
-    result.banglaExplanation,
-    "খোলা বন্ধনীর পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
-  );
-});
-test('detects empty parenthesis', () {
-  const sourceCode = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Expression cannot start with operator after '('.",
+      );
+      expect(result.errorLine, 2);
+      expect(
+        result.banglaExplanation,
+        "খোলা বন্ধনীর পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
+      );
+    });
+    test('detects empty parenthesis', () {
+      const sourceCode = '''
 int a;
 a = ();
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isFalse);
-  expect(
-    result.error,
-    "Empty parenthesis is not allowed.",
-  );
-  expect(result.errorLine, 2);
-  expect(
-    result.banglaExplanation,
-    "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
-  );
-});
-test('accepts unary minus expression', () {
-  const sourceCode = '''
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Empty parenthesis is not allowed.",
+      );
+      expect(result.errorLine, 2);
+      expect(
+        result.banglaExplanation,
+        "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
+      );
+    });
+    test('accepts unary minus expression', () {
+      const sourceCode = '''
 int a;
 a = -5;
 ''';
 
-  final checker = ExpressionChecker();
-  final result = checker.check(sourceCode);
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
 
-  expect(result.isSuccess, isTrue);
-  expect(result.error, '');
-});
+      expect(result.isSuccess, isTrue);
+      expect(result.error, '');
+    });
+
+    test('accepts scanf format string with percent specifiers', () {
+      const sourceCode = '''
+scanf("%d %d", &a, &b);
+''';
+
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.error, '');
+    });
+
+    test('accepts printf text containing equals and percent', () {
+      const sourceCode = '''
+printf("Sum = %d", sum);
+''';
+
+      final checker = ExpressionChecker();
+      final result = checker.check(sourceCode);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.error, '');
+    });
   });
 }

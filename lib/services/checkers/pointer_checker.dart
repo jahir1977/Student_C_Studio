@@ -16,8 +16,7 @@ class PointerChecker {
         continue;
       }
 
-      final CompilerResult? declarationResult =
-          _checkPointerDeclaration(
+      final CompilerResult? declarationResult = _checkPointerDeclaration(
         line: line,
         lineNumber: lineNumber,
         variables: variables,
@@ -57,8 +56,7 @@ class PointerChecker {
         return scanfResult;
       }
 
-      final CompilerResult? pointerAssignmentResult =
-          _checkPointerAssignment(
+      final CompilerResult? pointerAssignmentResult = _checkPointerAssignment(
         line: line,
         lineNumber: lineNumber,
         variables: variables,
@@ -69,8 +67,7 @@ class PointerChecker {
         return pointerAssignmentResult;
       }
 
-      final CompilerResult? dereferenceResult =
-          _checkDereference(
+      final CompilerResult? dereferenceResult = _checkDereference(
         line: line,
         lineNumber: lineNumber,
         variables: variables,
@@ -81,8 +78,7 @@ class PointerChecker {
         return dereferenceResult;
       }
 
-      final CompilerResult? addressResult =
-          _checkAddressOperator(
+      final CompilerResult? addressResult = _checkAddressOperator(
         line: line,
         lineNumber: lineNumber,
         variables: variables,
@@ -112,8 +108,7 @@ class PointerChecker {
     if (multiplePointerPattern.hasMatch(line)) {
       return CompilerResult.failure(
         error: 'Multiple-level pointer is not supported.',
-        explanation:
-            'Student C Studio-এর বর্তমান HSC পর্যায়ে শুধু এক স্তরের '
+        explanation: 'Student C Studio-এর বর্তমান HSC পর্যায়ে শুধু এক স্তরের '
             'পয়েন্টার সমর্থিত। একটি * চিহ্ন ব্যবহার করো।',
         errorLine: lineNumber,
       );
@@ -126,8 +121,7 @@ class PointerChecker {
     if (missingNamePattern.hasMatch(line)) {
       return CompilerResult.failure(
         error: 'Pointer variable name is missing.',
-        explanation:
-            'পয়েন্টার ঘোষণার সময় * চিহ্নের পরে একটি বৈধ '
+        explanation: 'পয়েন্টার ঘোষণার সময় * চিহ্নের পরে একটি বৈধ '
             'ভেরিয়েবলের নাম দিতে হবে।',
         errorLine: lineNumber,
       );
@@ -141,8 +135,7 @@ class PointerChecker {
     if (invalidNamePattern.hasMatch(line)) {
       return CompilerResult.failure(
         error: 'Invalid pointer variable name.',
-        explanation:
-            'পয়েন্টার ভেরিয়েবলের নাম সংখ্যা দিয়ে শুরু করা যায় না।',
+        explanation: 'পয়েন্টার ভেরিয়েবলের নাম সংখ্যা দিয়ে শুরু করা যায় না।',
         errorLine: lineNumber,
       );
     }
@@ -171,14 +164,12 @@ class PointerChecker {
     }
 
     if (initializer.startsWith('&')) {
-      final String addressedValue =
-          initializer.substring(1).trim();
+      final String addressedValue = initializer.substring(1).trim();
 
       if (_isLiteralValue(addressedValue)) {
         return CompilerResult.failure(
           error: 'Cannot take address of a literal value.',
-          explanation:
-              'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
+          explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
               '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
           errorLine: lineNumber,
         );
@@ -188,15 +179,13 @@ class PointerChecker {
           !variables.containsKey(addressedValue)) {
         return CompilerResult.failure(
           error: 'Addressed variable is not declared.',
-          explanation:
-              '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+          explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
               'ভেরিয়েবলটি ঘোষণা করতে হবে।',
           errorLine: lineNumber,
         );
       }
 
-      final String variableType =
-          variables[addressedValue]!.type;
+      final String variableType = variables[addressedValue]!.type;
 
       if (pointerType != variableType) {
         return _pointerVariableTypeMismatch(
@@ -209,16 +198,13 @@ class PointerChecker {
       return null;
     }
 
-    if (_isValidIdentifier(initializer) &&
-        pointers.containsKey(initializer)) {
-      final String sourcePointerType =
-          pointers[initializer]!.baseType;
+    if (_isValidIdentifier(initializer) && pointers.containsKey(initializer)) {
+      final String sourcePointerType = pointers[initializer]!.baseType;
 
       if (pointerType != sourcePointerType) {
         return CompilerResult.failure(
           error: 'Pointer types do not match.',
-          explanation:
-              '$pointerType পয়েন্টারে $sourcePointerType পয়েন্টারের '
+          explanation: '$pointerType পয়েন্টারে $sourcePointerType পয়েন্টারের '
               'ঠিকানা রাখা যায় না। উভয় পয়েন্টারের ডেটা টাইপ '
               'একই হতে হবে।',
           errorLine: lineNumber,
@@ -230,8 +216,7 @@ class PointerChecker {
 
     return CompilerResult.failure(
       error: 'Pointer must store an address.',
-      explanation:
-          'পয়েন্টার ভেরিয়েবলে সাধারণ মান রাখা যায় না। '
+      explanation: 'পয়েন্টার ভেরিয়েবলে সাধারণ মান রাখা যায় না। '
           'ভেরিয়েবলের ঠিকানা দিতে & চিহ্ন ব্যবহার করো।',
       errorLine: lineNumber,
     );
@@ -289,27 +274,119 @@ class PointerChecker {
       }
     }
 
-    final Match? match = RegExp(
-      r'^\s*(int|float|double|char|long|short)\s+'
-      r'([A-Za-z_][A-Za-z0-9_]*)\b',
+    final Match? declarationMatch = RegExp(
+      r'^\s*(int|float|double|char|long|short)\s+(.+?)\s*;\s*$',
     ).firstMatch(line);
 
-    if (match == null) {
+    if (declarationMatch == null) {
       return;
     }
 
-    final String type = match.group(1)!;
-    final String name = match.group(2)!;
+    final String type = declarationMatch.group(1)!;
+    final String declarationBody = declarationMatch.group(2)!.trim();
 
-    if (pointers.containsKey(name)) {
-      return;
-    }
-
-    variables[name] = _VariableSymbol(
-      name: name,
-      type: type,
-      declarationLine: lineNumber,
+    final List<String> declarators = _splitTopLevelArguments(
+      declarationBody,
     );
+
+    for (final String rawDeclarator in declarators) {
+      String declarator = rawDeclarator.trim();
+
+      if (declarator.isEmpty) {
+        continue;
+      }
+
+      final int assignmentIndex = _findTopLevelAssignmentIndex(
+        declarator,
+      );
+
+      if (assignmentIndex >= 0) {
+        declarator = declarator.substring(0, assignmentIndex).trim();
+      }
+
+      final Match? nameMatch = RegExp(
+        r'^([A-Za-z_][A-Za-z0-9_]*)'
+        r'(?:\s*\[[^\]]*\])?$',
+      ).firstMatch(declarator);
+
+      if (nameMatch == null) {
+        continue;
+      }
+
+      final String name = nameMatch.group(1)!;
+
+      if (pointers.containsKey(name)) {
+        continue;
+      }
+
+      variables[name] = _VariableSymbol(
+        name: name,
+        type: type,
+        declarationLine: lineNumber,
+      );
+    }
+  }
+
+  static int _findTopLevelAssignmentIndex(String text) {
+    int parenthesisDepth = 0;
+    int bracketDepth = 0;
+    bool insideDoubleQuote = false;
+    bool insideSingleQuote = false;
+    bool escaped = false;
+
+    for (int index = 0; index < text.length; index++) {
+      final String character = text[index];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if ((insideDoubleQuote || insideSingleQuote) && character == r'\') {
+        escaped = true;
+        continue;
+      }
+
+      if (!insideSingleQuote && character == '"') {
+        insideDoubleQuote = !insideDoubleQuote;
+        continue;
+      }
+
+      if (!insideDoubleQuote && character == "'") {
+        insideSingleQuote = !insideSingleQuote;
+        continue;
+      }
+
+      if (insideDoubleQuote || insideSingleQuote) {
+        continue;
+      }
+
+      if (character == '(') {
+        parenthesisDepth++;
+        continue;
+      }
+
+      if (character == ')') {
+        parenthesisDepth--;
+        continue;
+      }
+
+      if (character == '[') {
+        bracketDepth++;
+        continue;
+      }
+
+      if (character == ']') {
+        bracketDepth--;
+        continue;
+      }
+
+      if (character == '=' && parenthesisDepth == 0 && bracketDepth == 0) {
+        return index;
+      }
+    }
+
+    return -1;
   }
 
   static CompilerResult? _checkPointerAssignment({
@@ -336,12 +413,10 @@ class PointerChecker {
     final String rightSide = match.group(2)!.trim();
 
     if (!pointers.containsKey(leftSide)) {
-      if (rightSide.startsWith('&') &&
-          !variables.containsKey(leftSide)) {
+      if (rightSide.startsWith('&') && !variables.containsKey(leftSide)) {
         return CompilerResult.failure(
           error: 'Pointer variable is not declared.',
-          explanation:
-              '$leftSide পয়েন্টার ভেরিয়েবলটি ব্যবহারের আগে '
+          explanation: '$leftSide পয়েন্টার ভেরিয়েবলটি ব্যবহারের আগে '
               'ঘোষণা করতে হবে।',
           errorLine: lineNumber,
         );
@@ -354,18 +429,15 @@ class PointerChecker {
       return null;
     }
 
-    final String destinationType =
-        pointers[leftSide]!.baseType;
+    final String destinationType = pointers[leftSide]!.baseType;
 
     if (rightSide.startsWith('&')) {
-      final String addressedValue =
-          rightSide.substring(1).trim();
+      final String addressedValue = rightSide.substring(1).trim();
 
       if (_isLiteralValue(addressedValue)) {
         return CompilerResult.failure(
           error: 'Cannot take address of a literal value.',
-          explanation:
-              'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
+          explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
               '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
           errorLine: lineNumber,
         );
@@ -374,15 +446,13 @@ class PointerChecker {
       if (!variables.containsKey(addressedValue)) {
         return CompilerResult.failure(
           error: 'Addressed variable is not declared.',
-          explanation:
-              '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+          explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
               'ভেরিয়েবলটি ঘোষণা করতে হবে।',
           errorLine: lineNumber,
         );
       }
 
-      final String variableType =
-          variables[addressedValue]!.type;
+      final String variableType = variables[addressedValue]!.type;
 
       if (destinationType != variableType) {
         return _pointerVariableTypeMismatch(
@@ -396,14 +466,12 @@ class PointerChecker {
     }
 
     if (pointers.containsKey(rightSide)) {
-      final String sourceType =
-          pointers[rightSide]!.baseType;
+      final String sourceType = pointers[rightSide]!.baseType;
 
       if (destinationType != sourceType) {
         return CompilerResult.failure(
           error: 'Pointer types do not match.',
-          explanation:
-              '$destinationType পয়েন্টারে $sourceType পয়েন্টারের '
+          explanation: '$destinationType পয়েন্টারে $sourceType পয়েন্টারের '
               'ঠিকানা রাখা যায় না। উভয় পয়েন্টারের ডেটা টাইপ '
               'একই হতে হবে।',
           errorLine: lineNumber,
@@ -415,8 +483,7 @@ class PointerChecker {
 
     return CompilerResult.failure(
       error: 'Pointer must store an address.',
-      explanation:
-          'পয়েন্টার ভেরিয়েবলে সাধারণ মান রাখা যায় না। '
+      explanation: 'পয়েন্টার ভেরিয়েবলে সাধারণ মান রাখা যায় না। '
           'ভেরিয়েবলের ঠিকানা অথবা NULL দিতে হবে।',
       errorLine: lineNumber,
     );
@@ -458,8 +525,7 @@ class PointerChecker {
       if (variables.containsKey(name)) {
         return CompilerResult.failure(
           error: 'Only a pointer can be dereferenced.',
-          explanation:
-              '$name একটি সাধারণ ভেরিয়েবল। * চিহ্ন দিয়ে শুধু '
+          explanation: '$name একটি সাধারণ ভেরিয়েবল। * চিহ্ন দিয়ে শুধু '
               'পয়েন্টার ভেরিয়েবলের সংরক্ষিত ঠিকানার মান পাওয়া যায়।',
           errorLine: lineNumber,
         );
@@ -467,8 +533,7 @@ class PointerChecker {
 
       return CompilerResult.failure(
         error: 'Pointer variable is not declared.',
-        explanation:
-            '$name পয়েন্টার ভেরিয়েবলটি dereference করার আগে '
+        explanation: '$name পয়েন্টার ভেরিয়েবলটি dereference করার আগে '
             'ঘোষণা করতে হবে।',
         errorLine: lineNumber,
       );
@@ -483,8 +548,7 @@ class PointerChecker {
     required Map<String, _VariableSymbol> variables,
     required Map<String, _PointerSymbol> pointers,
   }) {
-    final String withoutLogicalAnd =
-        line.replaceAll('&&', '');
+    final String withoutLogicalAnd = line.replaceAll('&&', '');
 
     final Iterable<Match> matches = RegExp(
       r'&\s*([A-Za-z_][A-Za-z0-9_]*)',
@@ -493,15 +557,13 @@ class PointerChecker {
     for (final Match match in matches) {
       final String name = match.group(1)!;
 
-      if (variables.containsKey(name) ||
-          pointers.containsKey(name)) {
+      if (variables.containsKey(name) || pointers.containsKey(name)) {
         continue;
       }
 
       return CompilerResult.failure(
         error: 'Addressed variable is not declared.',
-        explanation:
-            '$name ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+        explanation: '$name ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
             'ভেরিয়েবলটি ঘোষণা করতে হবে।',
         errorLine: lineNumber,
       );
@@ -524,51 +586,93 @@ class PointerChecker {
       return null;
     }
 
-    final String argument = match.group(1)!.trim();
+    final List<String> arguments = _splitTopLevelArguments(
+      match.group(1) ?? '',
+    );
 
-    if (argument.startsWith('&')) {
-      final String name = argument.substring(1).trim();
+    for (final String rawArgument in arguments) {
+      final String argument = rawArgument.trim();
 
-      if (pointers.containsKey(name)) {
+      if (argument.isEmpty) {
+        continue;
+      }
+
+      if (argument.startsWith('&')) {
+        final String name = argument.substring(1).trim();
+
+        if (pointers.containsKey(name)) {
+          return CompilerResult.failure(
+            error: 'Do not use & before a pointer in scanf.',
+            explanation: '$name নিজেই একটি ঠিকানা সংরক্ষণ করে। scanf() ফাংশনে '
+                'পয়েন্টার ব্যবহার করলে তার আগে অতিরিক্ত & চিহ্ন '
+                'দিতে হবে না।',
+            errorLine: lineNumber,
+          );
+        }
+
+        if (!variables.containsKey(name)) {
+          return CompilerResult.failure(
+            error: 'Addressed variable is not declared.',
+            explanation: '$name ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+                'ভেরিয়েবলটি ঘোষণা করতে হবে।',
+            errorLine: lineNumber,
+          );
+        }
+
+        continue;
+      }
+
+      if (pointers.containsKey(argument)) {
+        continue;
+      }
+
+      if (_isValidIdentifier(argument) && !variables.containsKey(argument)) {
         return CompilerResult.failure(
-          error: 'Do not use & before a pointer in scanf.',
-          explanation:
-              '$name নিজেই একটি ঠিকানা সংরক্ষণ করে। scanf() ফাংশনে '
-              'পয়েন্টার ব্যবহার করলে তার আগে অতিরিক্ত & চিহ্ন '
-              'দিতে হবে না।',
+          error: 'Pointer variable is not declared.',
+          explanation: '$argument পয়েন্টার ভেরিয়েবলটি ব্যবহারের আগে '
+              'ঘোষণা করতে হবে।',
           errorLine: lineNumber,
         );
       }
-
-      if (!variables.containsKey(name)) {
-        return CompilerResult.failure(
-          error: 'Addressed variable is not declared.',
-          explanation:
-              '$name ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
-              'ভেরিয়েবলটি ঘোষণা করতে হবে।',
-          errorLine: lineNumber,
-        );
-      }
-
-      return null;
-    }
-
-    if (pointers.containsKey(argument)) {
-      return null;
-    }
-
-    if (_isValidIdentifier(argument) &&
-        !variables.containsKey(argument)) {
-      return CompilerResult.failure(
-        error: 'Pointer variable is not declared.',
-        explanation:
-            '$argument পয়েন্টার ভেরিয়েবলটি ব্যবহারের আগে '
-            'ঘোষণা করতে হবে।',
-        errorLine: lineNumber,
-      );
     }
 
     return null;
+  }
+
+  static List<String> _splitTopLevelArguments(String text) {
+    final List<String> arguments = <String>[];
+    final StringBuffer buffer = StringBuffer();
+
+    int parenthesisDepth = 0;
+    int bracketDepth = 0;
+
+    for (int index = 0; index < text.length; index++) {
+      final String character = text[index];
+
+      if (character == '(') {
+        parenthesisDepth++;
+      } else if (character == ')') {
+        parenthesisDepth--;
+      } else if (character == '[') {
+        bracketDepth++;
+      } else if (character == ']') {
+        bracketDepth--;
+      }
+
+      if (character == ',' && parenthesisDepth == 0 && bracketDepth == 0) {
+        arguments.add(buffer.toString().trim());
+        buffer.clear();
+        continue;
+      }
+
+      buffer.write(character);
+    }
+
+    if (buffer.isNotEmpty) {
+      arguments.add(buffer.toString().trim());
+    }
+
+    return arguments;
   }
 
   static CompilerResult _pointerVariableTypeMismatch({
@@ -578,8 +682,7 @@ class PointerChecker {
   }) {
     return CompilerResult.failure(
       error: 'Pointer type does not match variable type.',
-      explanation:
-          '$pointerType পয়েন্টারে $variableType ভেরিয়েবলের ঠিকানা '
+      explanation: '$pointerType পয়েন্টারে $variableType ভেরিয়েবলের ঠিকানা '
           'রাখা যায় না। পয়েন্টার ও ভেরিয়েবলের ডেটা টাইপ '
           'একই হতে হবে।',
       errorLine: lineNumber,
@@ -596,8 +699,8 @@ class PointerChecker {
     final String trimmedValue = value.trim();
 
     return RegExp(
-      r'^[-+]?\d+(?:\.\d+)?$',
-    ).hasMatch(trimmedValue) ||
+          r'^[-+]?\d+(?:\.\d+)?$',
+        ).hasMatch(trimmedValue) ||
         RegExp(
           r"^'(?:\\.|[^'\\])'$",
         ).hasMatch(trimmedValue) ||
@@ -618,8 +721,7 @@ class PointerChecker {
 
       while (i < originalLine.length) {
         if (insideBlockComment) {
-          final int commentEnd =
-              originalLine.indexOf('*/', i);
+          final int commentEnd = originalLine.indexOf('*/', i);
 
           if (commentEnd == -1) {
             i = originalLine.length;
@@ -632,9 +734,8 @@ class PointerChecker {
         }
 
         final String current = originalLine[i];
-        final String? next = i + 1 < originalLine.length
-            ? originalLine[i + 1]
-            : null;
+        final String? next =
+            i + 1 < originalLine.length ? originalLine[i + 1] : null;
 
         if (!insideSingleQuote &&
             current == '"' &&
@@ -687,11 +788,12 @@ class PointerChecker {
 
     return slashCount.isOdd;
   }
+
   static CompilerResult checkContext(
-  CompilerContext context,
-) {
-  return check(context.sanitizedSource);
-}
+    CompilerContext context,
+  ) {
+    return check(context.sanitizedSource);
+  }
 }
 
 class _VariableSymbol {

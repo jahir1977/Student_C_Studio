@@ -555,5 +555,60 @@ int main()
       expect(result.isSuccess, isTrue);
       expect(result.output, '50');
     });
+
+    test('passes scanf input through compiler to execution engine', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 0;
+    int b = 0;
+    int sum = 0;
+
+    scanf("%d %d", &a, &b);
+    sum = a + b;
+    printf("Sum = %d", sum);
+
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(
+        code,
+        input: '10 20',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, 'Sum = 30');
+    });
+
+    test('prints prompt and uses scanf input in same program', () {
+      const String code = '''
+#include<stdio.h>
+
+int main()
+{
+    int a = 0;
+    int b = 0;
+
+    printf("Enter two numbers:");
+    scanf("%d %d", &a, &b);
+    printf("%d", a + b);
+
+    return 0;
+}
+''';
+
+      const MockCompiler compiler = MockCompiler();
+      final CompilerResult result = compiler.compile(
+        code,
+        input: '7 8',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.output, 'Enter two numbers:15');
+    });
   });
 }

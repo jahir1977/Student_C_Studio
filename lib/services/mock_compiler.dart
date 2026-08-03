@@ -25,7 +25,10 @@ class MockCompiler {
   })  : _contextBuilder = contextBuilder,
         _outputEngine = outputEngine;
 
-  CompilerResult compile(String code) {
+  CompilerResult compile(
+    String code, {
+    String input = '',
+  }) {
     final String source = code;
 
     if (source.trim().isEmpty) {
@@ -121,6 +124,7 @@ class MockCompiler {
 
     final String output = _outputEngine.execute(
       codeWithoutComments,
+      input: input,
     );
 
     return CompilerResult.success(
