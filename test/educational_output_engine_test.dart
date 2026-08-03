@@ -245,5 +245,45 @@ printf("END");
         'YESEND',
       );
     });
+    test('supports nested if statements', () {
+      const String code = '''
+int a = 10;
+int b = 20;
+
+if (a > 5)
+{
+    if (b > 10)
+    {
+        printf("OK");
+    }
+}
+''';
+
+      expect(
+        engine.execute(code),
+        'OK',
+      );
+    });
+    test('skips inner if when inner condition is false', () {
+      const String code = '''
+int a = 10;
+int b = 5;
+
+if (a > 5)
+{
+    if (b > 10)
+    {
+        printf("OK");
+    }
+}
+
+printf("END");
+''';
+
+      expect(
+        engine.execute(code),
+        'END',
+      );
+    });
   });
 }

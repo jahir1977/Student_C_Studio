@@ -238,43 +238,57 @@ class EducationalOutputEngine {
     final RegExp ifElsePattern = RegExp(
       r'if\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*'
       r'(==|!=|>=|<=|>|<)\s*(-?\d+)\s*\)\s*'
-      r'\{([\s\S]*?)\}\s*else\s*\{([\s\S]*?)\}',
+      r'\{([^{}]*)\}\s*else\s*\{([^{}]*)\}',
       multiLine: true,
-    );
-
-    String filteredCode = code.replaceAllMapped(
-      ifElsePattern,
-      (Match match) {
-        final String variable = match.group(1)!;
-        final String operator = match.group(2)!;
-        final int value = int.parse(match.group(3)!);
-        final String trueBody = match.group(4)!;
-        final String falseBody = match.group(5)!;
-
-        return evaluateCondition(variable, operator, value)
-            ? trueBody
-            : falseBody;
-      },
     );
 
     final RegExp ifPattern = RegExp(
       r'if\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*'
       r'(==|!=|>=|<=|>|<)\s*(-?\d+)\s*\)\s*'
-      r'\{([\s\S]*?)\}',
+      r'\{([^{}]*)\}',
       multiLine: true,
     );
 
-    filteredCode = filteredCode.replaceAllMapped(
-      ifPattern,
-      (Match match) {
-        final String variable = match.group(1)!;
-        final String operator = match.group(2)!;
-        final int value = int.parse(match.group(3)!);
-        final String body = match.group(4)!;
+    String filteredCode = code;
 
-        return evaluateCondition(variable, operator, value) ? body : '';
-      },
-    );
+    while (true) {
+      bool changed = false;
+
+      filteredCode = filteredCode.replaceAllMapped(
+        ifElsePattern,
+        (Match match) {
+          changed = true;
+
+          final String variable = match.group(1)!;
+          final String operator = match.group(2)!;
+          final int value = int.parse(match.group(3)!);
+          final String trueBody = match.group(4)!;
+          final String falseBody = match.group(5)!;
+
+          return evaluateCondition(variable, operator, value)
+              ? trueBody
+              : falseBody;
+        },
+      );
+
+      filteredCode = filteredCode.replaceAllMapped(
+        ifPattern,
+        (Match match) {
+          changed = true;
+
+          final String variable = match.group(1)!;
+          final String operator = match.group(2)!;
+          final int value = int.parse(match.group(3)!);
+          final String body = match.group(4)!;
+
+          return evaluateCondition(variable, operator, value) ? body : '';
+        },
+      );
+
+      if (!changed) {
+        break;
+      }
+    }
 
     return filteredCode;
   }
