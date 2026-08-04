@@ -34,6 +34,9 @@ int main()
 
   final FocusNode _inputFocusNode = FocusNode();
 
+  final DraggableScrollableController _curtainController =
+      DraggableScrollableController();
+
   final MockCompiler _compiler = const MockCompiler();
 
   final BanglaErrorService _banglaErrorService = const BanglaErrorService();
@@ -45,6 +48,10 @@ int main()
   bool _isRunning = false;
 
   int _lineCount = 1;
+
+  _CurtainView _curtainView = _CurtainView.output;
+
+  bool _curtainActivated = false;
 
   @override
   void initState() {
@@ -61,6 +68,7 @@ int main()
     _inputController.dispose();
     _editorScrollController.dispose();
     _inputFocusNode.dispose();
+    _curtainController.dispose();
 
     super.dispose();
   }
@@ -194,6 +202,10 @@ int main()
 
     if (_inputValues.length >= requiredTypes.length) {
       _inputFocusNode.unfocus();
+
+      if (_curtainActivated) {
+        Future<void>.microtask(_compileAndShowResult);
+      }
     } else {
       _inputFocusNode.requestFocus();
     }
@@ -347,6 +359,33 @@ int main()
   Future<void> _runProgram() async {
     FocusScope.of(context).unfocus();
 
+    final int requiredCount = _requiredInputCount();
+    final bool needsInput = _inputValues.length < requiredCount;
+
+    setState(() {
+      _curtainActivated = true;
+      _curtainView = needsInput ? _CurtainView.input : _CurtainView.output;
+    });
+
+    _openCurtain();
+
+    if (needsInput) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _inputFocusNode.requestFocus();
+        }
+      });
+      return;
+    }
+
+    await _compileAndShowResult();
+  }
+
+  Future<void> _compileAndShowResult() async {
+    if (_isRunning) {
+      return;
+    }
+
     setState(() {
       _isRunning = true;
       _result = null;
@@ -374,6 +413,24 @@ int main()
       _result = result;
       _banglaExplanation = explanation;
       _isRunning = false;
+      _curtainActivated = true;
+      _curtainView = _CurtainView.output;
+    });
+
+    _openCurtain();
+  }
+
+  void _openCurtain() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_curtainController.isAttached) {
+        return;
+      }
+
+      _curtainController.animateTo(
+        0.72,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
     });
   }
 
@@ -384,6 +441,7 @@ int main()
       _inputValues.clear();
       _result = null;
       _banglaExplanation = 'নতুন Program লেখা শুরু করুন।';
+      _curtainView = _CurtainView.output;
     });
   }
 
@@ -409,6 +467,7 @@ int main()
       _inputController.clear();
       _inputValues.clear();
       _result = null;
+      _curtainView = _CurtainView.output;
       _banglaExplanation = 'Sample Program লোড হয়েছে। '
           'কোড পরিবর্তন করে Run করতে পারবেন।';
     });
@@ -539,30 +598,113 @@ int main()
   }
 
   Widget _buildNarrowLayout() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          child: _buildEditorSection(),
+        ),
+        DraggableScrollableSheet(
+          controller: _curtainController,
+          initialChildSize: 0.055,
+          minChildSize: 0.055,
+          maxChildSize: 0.88,
+          snap: true,
+          snapSizes: const <double>[0.055, 0.72, 0.88],
+          builder: (
+            BuildContext context,
+            ScrollController scrollController,
+          ) {
+            return _buildCurtain(
+              scrollController,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurtain(
+    ScrollController scrollController,
+  ) {
+    return Material(
+      elevation: 14,
+      color: const Color(0xFFF4F6F8),
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           SizedBox(
-            height: 430,
-            child: _buildEditorSection(),
+            height: 34,
+            child: SingleChildScrollView(
+              controller: scrollController,
+              physics: const ClampingScrollPhysics(),
+              child: const SizedBox(
+                height: 34,
+                child: Center(
+                  child: _CurtainHandle(),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 165,
-            child: _buildInputSection(),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 220,
-            child: _buildOutputSection(),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 220,
-            child: _buildBanglaExplanationSection(),
+          Expanded(
+            child: Column(
+              children: [
+                _buildCurtainTabs(),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: IndexedStack(
+                      index: _curtainView.index,
+                      children: [
+                        _buildInputSection(),
+                        _buildOutputSection(),
+                        _buildBanglaExplanationSection(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCurtainTabs() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: SegmentedButton<_CurtainView>(
+        segments: const <ButtonSegment<_CurtainView>>[
+          ButtonSegment<_CurtainView>(
+            value: _CurtainView.input,
+            icon: Icon(Icons.keyboard_outlined),
+            label: Text('Input'),
+          ),
+          ButtonSegment<_CurtainView>(
+            value: _CurtainView.output,
+            icon: Icon(Icons.terminal),
+            label: Text('Output'),
+          ),
+          ButtonSegment<_CurtainView>(
+            value: _CurtainView.explanation,
+            icon: Icon(Icons.school_outlined),
+            label: Text('বাংলা'),
+          ),
+        ],
+        selected: <_CurtainView>{_curtainView},
+        showSelectedIcon: false,
+        onSelectionChanged: (Set<_CurtainView> selection) {
+          setState(() {
+            _curtainView = selection.first;
+            _curtainActivated = true;
+          });
+          _openCurtain();
+        },
       ),
     );
   }
@@ -1064,6 +1206,28 @@ int main()
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _CurtainView {
+  input,
+  output,
+  explanation,
+}
+
+class _CurtainHandle extends StatelessWidget {
+  const _CurtainHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 5,
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade400,
+        borderRadius: BorderRadius.circular(99),
       ),
     );
   }
