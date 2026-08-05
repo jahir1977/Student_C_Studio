@@ -18,7 +18,6 @@ const List<SampleProgram> sampleProgramLibrary = [
     titleBn: '৫.১ Hello World প্রদর্শন',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
-
 int main()
 {
     printf("Hello World!");
@@ -30,7 +29,6 @@ int main()
     titleBn: '৫.২ ক্যারেক্টার ডেটা টাইপ',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
-
 int main()
 {
     char grade;
@@ -44,7 +42,6 @@ int main()
     titleBn: '৫.৩ ভ্যারিয়েবল আপডেট',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number;
@@ -64,7 +61,6 @@ int main()
     titleBn: '৫.৪ যোগফল ও বিয়োগফল',
     topicTagBn: 'গাণিতিক অপারেটর ও এক্সপ্রেশন',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b, sum, difference;
@@ -82,7 +78,6 @@ int main()
     titleBn: '৫.৫ গুণফল ও ভাগফল',
     topicTagBn: 'গাণিতিক অপারেটর ও এক্সপ্রেশন',
     code: '''#include<stdio.h>
-
 int main()
 {
     float a, b, product, quotient;
@@ -104,7 +99,6 @@ int main()
     titleBn: '৫.৬ ব্যবহারকারীর ইনপুট নিয়ে যোগফল',
     topicTagBn: 'ইনপুট/আউটপুট (scanf/printf)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b, sum;
@@ -120,7 +114,6 @@ int main()
     titleBn: '৫.৭ সেলসিয়াস থেকে ফারেনহাইট',
     topicTagBn: 'ইনপুট/আউটপুট (scanf/printf)',
     code: '''#include<stdio.h>
-
 int main()
 {
     float celsius, fahrenheit;
@@ -140,7 +133,6 @@ int main()
     titleBn: '৫.৮ দুটি সংখ্যা সমান কিনা (স্থির মান)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b;
@@ -162,7 +154,6 @@ int main()
     titleBn: '৫.৯ দুটি সংখ্যা সমান কিনা (ইনপুট থেকে)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b;
@@ -184,7 +175,6 @@ int main()
     titleBn: '৫.১০ Else-If লেডার (বড়/ছোট নির্ণয়)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b, c;
@@ -210,7 +200,6 @@ int main()
     titleBn: '৫.১১ লেটার গ্রেড নির্ণয়',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int marks;
@@ -248,7 +237,6 @@ int main()
     titleBn: '৫.১২ লজিক্যাল অপারেটর (চাকরির বয়স যাচাই)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int age;
@@ -270,7 +258,6 @@ int main()
     titleBn: '৫.১৩ মডুলাস: ৩ ও ৫ দ্বারা বিভাজ্য কিনা',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number;
@@ -296,7 +283,6 @@ int main()
     titleBn: '৫.১৪ While লুপ: ৫ বার প্রিন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i;
@@ -314,7 +300,6 @@ int main()
     titleBn: '৫.১৫ ১ থেকে ১০০ পর্যন্ত প্রিন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i;
@@ -332,7 +317,6 @@ int main()
     titleBn: '৫.১৬ ১ থেকে ১০০ পর্যন্ত জোড় সংখ্যা',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i;
@@ -350,7 +334,6 @@ int main()
     titleBn: '৫.১৭ ১ থেকে ১০০ পর্যন্ত যোগফল (while)',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i, sum;
@@ -370,7 +353,6 @@ int main()
     titleBn: '৫.১৮ Do-While লুপ',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i;
@@ -389,7 +371,6 @@ int main()
     titleBn: '৫.১৯ For লুপ: ১ থেকে ১০০ যোগফল',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i, sum;
@@ -407,7 +388,6 @@ int main()
     titleBn: '৫.২০ Continue স্টেটমেন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i;
@@ -427,7 +407,6 @@ int main()
     titleBn: '৫.২১ নামতা (Multiplication Table)',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number, i;
@@ -449,7 +428,6 @@ int main()
     titleBn: '৫ জন শিক্ষার্থীর নম্বর অ্যারেতে রাখা',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int marks[5];
@@ -471,7 +449,6 @@ int main()
     titleBn: 'অ্যারের যোগফল (১০টি সংখ্যা)',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number[10];
@@ -492,7 +469,6 @@ int main()
     titleBn: 'মান অদলবদল (Swapping)',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b, temp;
@@ -511,7 +487,6 @@ int main()
     titleBn: 'অ্যারে রিভার্স',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number[5];
@@ -534,7 +509,6 @@ int main()
     titleBn: 'লিনিয়ার সার্চ',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number[10];
@@ -574,7 +548,6 @@ int main()
     titleBn: 'স্ট্রিং ইনপুট (নাম)',
     topicTagBn: 'স্ট্রিং (String)',
     code: '''#include<stdio.h>
-
 int main()
 {
     char name[30];
@@ -589,7 +562,6 @@ int main()
     titleBn: 'স্ট্রিং দৈর্ঘ্য (লুপ দিয়ে)',
     topicTagBn: 'স্ট্রিং (String)',
     code: '''#include<stdio.h>
-
 int main()
 {
     char word[30];
@@ -615,7 +587,6 @@ int main()
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
 #include<math.h>
-
 int main()
 {
     float number, result;
@@ -632,7 +603,6 @@ int main()
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
 #include<math.h>
-
 int main()
 {
     float x, y, result;
@@ -649,7 +619,6 @@ int main()
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
 #include<string.h>
-
 int main()
 {
     char first[30], second[30];
@@ -680,7 +649,6 @@ int main()
     titleBn: '৫.৩২ ইউজার ডিফাইন্ড ফাংশন',
     topicTagBn: 'ইউজার ডিফাইন্ড ফাংশন',
     code: '''#include<stdio.h>
-
 float celsiusToFahrenheit(float celsius)
 {
     float fahrenheit;
@@ -707,7 +675,6 @@ int main()
     titleBn: 'সৃজনশীল ১: ১-৩০ বিজোড় সংখ্যার যোগফল',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     int i, sum;
@@ -725,7 +692,6 @@ int main()
     titleBn: 'সৃজনশীল ২: সংখ্যার অংক বিপরীত ক্রমে',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     int number, digit, reverse;
@@ -747,7 +713,6 @@ int main()
     titleBn: 'সৃজনশীল ৩: সেলসিয়াস থেকে ফারেনহাইট (ফ্লোচার্ট অনুযায়ী)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     float celsius, fahrenheit;
@@ -763,7 +728,6 @@ int main()
     titleBn: 'সৃজনশীল ৪: রোল নম্বর অনুযায়ী গ্রুপ (A/B/C)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     int roll;
@@ -789,7 +753,6 @@ int main()
     titleBn: 'সৃজনশীল ৫: ফারেনহাইট থেকে সেলসিয়াস',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     float fahrenheit, celsius;
@@ -805,7 +768,6 @@ int main()
     titleBn: 'সৃজনশীল ৬: ল.সা.গু (LCM) ও গ.সা.গু (GCD)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
-
 int main()
 {
     int a, b, x, y, temp, gcd, lcm;

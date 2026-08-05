@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/compiler_result.dart';
+import '../models/saved_program.dart';
 import '../services/bangla_error_service.dart';
 import '../services/mock_compiler.dart';
+import '../services/program_storage_service.dart';
+import 'my_programs_page.dart';
 import 'sample_program_page.dart';
 
 class EditorPage extends StatefulWidget {
@@ -34,12 +39,17 @@ int main()
 
   final FocusNode _inputFocusNode = FocusNode();
 
+  final FocusNode _editorFocusNode = FocusNode();
+
   final DraggableScrollableController _curtainController =
       DraggableScrollableController();
 
   final MockCompiler _compiler = const MockCompiler();
 
   final BanglaErrorService _banglaErrorService = const BanglaErrorService();
+
+  final ProgramStorageService _programStorageService =
+      const ProgramStorageService();
 
   CompilerResult? _result;
 
@@ -49,9 +59,25 @@ int main()
 
   int _lineCount = 1;
 
-  _CurtainView _curtainView = _CurtainView.output;
-
   bool _curtainActivated = false;
+
+  SavedProgram? _currentProgram;
+
+  Timer? _autoSaveTimer;
+
+  bool _isApplyingCode = false;
+
+  bool _storageReady = false;
+
+  bool _isSampleMode = false;
+
+  bool _editorHasFocus = false;
+
+  double _curtainExtent = 0.055;
+
+  static const double _wideLayoutBreakpoint = 900;
+
+  static const double _curtainExpandedThreshold = 0.2;
 
   @override
   void initState() {
@@ -59,18 +85,58 @@ int main()
 
     _updateLineCount();
     _codeController.addListener(_handleCodeChanged);
+    _editorFocusNode.addListener(_handleEditorFocusChanged);
+    _curtainController.addListener(_handleCurtainExtentChanged);
+    unawaited(_initializeProgramStorage());
   }
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _codeController.removeListener(_handleCodeChanged);
     _codeController.dispose();
     _inputController.dispose();
     _editorScrollController.dispose();
     _inputFocusNode.dispose();
+    _editorFocusNode.removeListener(_handleEditorFocusChanged);
+    _editorFocusNode.dispose();
+    _curtainController.removeListener(_handleCurtainExtentChanged);
     _curtainController.dispose();
 
     super.dispose();
+  }
+
+  void _handleCurtainExtentChanged() {
+    if (!mounted || !_curtainController.isAttached) {
+      return;
+    }
+
+    final double size = _curtainController.size;
+    final bool wasExpanded = _curtainExtent > _curtainExpandedThreshold;
+    final bool isExpanded = size > _curtainExpandedThreshold;
+
+    if (wasExpanded == isExpanded) {
+      _curtainExtent = size;
+      return;
+    }
+
+    setState(() {
+      _curtainExtent = size;
+    });
+  }
+
+  void _handleEditorFocusChanged() {
+    if (!mounted || _editorHasFocus == _editorFocusNode.hasFocus) {
+      return;
+    }
+
+    setState(() {
+      _editorHasFocus = _editorFocusNode.hasFocus;
+    });
+
+    if (_editorHasFocus) {
+      _closeCurtain();
+    }
   }
 
   void _handleCodeChanged() {
@@ -86,6 +152,92 @@ int main()
         );
       });
     }
+
+    if (_isApplyingCode ||
+        !_storageReady ||
+        _isSampleMode ||
+        _currentProgram == null) {
+      return;
+    }
+
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(
+      const Duration(milliseconds: 700),
+      _autoSaveCurrentProgram,
+    );
+  }
+
+  Future<void> _initializeProgramStorage() async {
+    final SavedProgram? currentProgram =
+        await _programStorageService.loadCurrentProgram();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (currentProgram != null) {
+      _applySavedProgram(currentProgram);
+    }
+
+    setState(() {
+      _storageReady = true;
+    });
+  }
+
+  Future<void> _autoSaveCurrentProgram() async {
+    final SavedProgram? program = _currentProgram;
+
+    if (program == null || _isSampleMode) {
+      return;
+    }
+
+    final SavedProgram updated = await _programStorageService.saveProgram(
+      program,
+      sourceCode: _codeController.text,
+    );
+
+    if (!mounted || _currentProgram?.id != updated.id) {
+      return;
+    }
+
+    setState(() {
+      _currentProgram = updated;
+    });
+  }
+
+  Future<void> _flushAutoSave() async {
+    _autoSaveTimer?.cancel();
+
+    if (_currentProgram == null || _isSampleMode) {
+      return;
+    }
+
+    await _autoSaveCurrentProgram();
+  }
+
+  void _applySavedProgram(SavedProgram program) {
+    _autoSaveTimer?.cancel();
+    _isApplyingCode = true;
+
+    _codeController.text = program.sourceCode;
+    _codeController.selection = TextSelection.collapsed(
+      offset: _codeController.text.length,
+    );
+
+    _inputController.clear();
+    _inputValues.clear();
+
+    setState(() {
+      _currentProgram = program;
+      _isSampleMode = false;
+      _result = null;
+      _banglaExplanation = '${program.displayName} খোলা হয়েছে।';
+    });
+
+    _isApplyingCode = false;
+    unawaited(
+      _programStorageService.setCurrentProgram(program),
+    );
   }
 
   void _updateLineCount() {
@@ -224,7 +376,7 @@ int main()
 
       case _ScanfInputType.unsignedInteger:
         if (!RegExp(r'^\+?\d+$').hasMatch(value)) {
-          return 'ঋণাত্মক নয় এমন পূর্ণসংখ্যা লিখে Enter চাপুন।';
+          return 'ঋণাত্মক নয় এমন পূর্ণসংখ্যা লিখে Enter চাপুন।';
         }
         return null;
 
@@ -249,7 +401,7 @@ int main()
         }
 
         if (RegExp(r'\s').hasMatch(value)) {
-          return '%s-এর জন্য স্পেস ছাড়া একটি শব্দ লিখুন।';
+          return '%s-এর জন্য স্পেস ছাড়া একটি শব্দ লিখুন।';
         }
 
         return null;
@@ -358,13 +510,20 @@ int main()
 
   Future<void> _runProgram() async {
     FocusScope.of(context).unfocus();
+    await _flushAutoSave();
+
+    setState(() {
+      _inputController.clear();
+      _inputValues.clear();
+      _result = null;
+      _banglaExplanation = 'নতুন Input দিন, Run সম্পন্ন হলে ফলাফল দেখাবে।';
+    });
 
     final int requiredCount = _requiredInputCount();
     final bool needsInput = _inputValues.length < requiredCount;
 
     setState(() {
       _curtainActivated = true;
-      _curtainView = needsInput ? _CurtainView.input : _CurtainView.output;
     });
 
     _openCurtain();
@@ -414,7 +573,6 @@ int main()
       _banglaExplanation = explanation;
       _isRunning = false;
       _curtainActivated = true;
-      _curtainView = _CurtainView.output;
     });
 
     _openCurtain();
@@ -427,25 +585,56 @@ int main()
       }
 
       _curtainController.animateTo(
-        0.72,
-        duration: const Duration(milliseconds: 320),
+        0.84,
+        duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
       );
     });
   }
 
-  void _newProgram() {
-    setState(() {
-      _codeController.clear();
-      _inputController.clear();
-      _inputValues.clear();
-      _result = null;
-      _banglaExplanation = 'নতুন Program লেখা শুরু করুন।';
-      _curtainView = _CurtainView.output;
-    });
+  void _closeCurtain() {
+    if (!_curtainController.isAttached) {
+      return;
+    }
+
+    _curtainController.animateTo(
+      0.055,
+      duration: const Duration(milliseconds: 820),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  Future<void> _newProgram() async {
+    await _flushAutoSave();
+
+    if (!mounted) {
+      return;
+    }
+
+    try {
+      final SavedProgram program = await _programStorageService.createProgram();
+
+      if (!mounted) {
+        return;
+      }
+
+      _applySavedProgram(program);
+    } on ProgramStorageLimitException {
+      _showInputMessage(
+        'Maximum 100 programs reached. '
+        'নতুন Program তৈরি করতে আগে My Programs থেকে '
+        'একটি Program Delete করুন।',
+      );
+    }
   }
 
   Future<void> _loadSampleProgram() async {
+    await _flushAutoSave();
+
+    if (!mounted) {
+      return;
+    }
+
     final String? selectedCode = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         builder: (BuildContext context) {
@@ -458,19 +647,49 @@ int main()
       return;
     }
 
-    setState(() {
-      _codeController.text = selectedCode;
-      _codeController.selection = TextSelection.collapsed(
-        offset: _codeController.text.length,
-      );
+    _autoSaveTimer?.cancel();
+    _isApplyingCode = true;
 
-      _inputController.clear();
-      _inputValues.clear();
+    _codeController.text = selectedCode;
+    _codeController.selection = TextSelection.collapsed(
+      offset: _codeController.text.length,
+    );
+
+    _inputController.clear();
+    _inputValues.clear();
+
+    setState(() {
+      _currentProgram = null;
+      _isSampleMode = true;
       _result = null;
-      _curtainView = _CurtainView.output;
       _banglaExplanation = 'Sample Program লোড হয়েছে। '
           'কোড পরিবর্তন করে Run করতে পারবেন।';
     });
+
+    _isApplyingCode = false;
+  }
+
+  Future<void> _openMyPrograms() async {
+    await _flushAutoSave();
+
+    if (!mounted) {
+      return;
+    }
+
+    final SavedProgram? selectedProgram =
+        await Navigator.of(context).push<SavedProgram>(
+      MaterialPageRoute<SavedProgram>(
+        builder: (BuildContext context) {
+          return const MyProgramsPage();
+        },
+      ),
+    );
+
+    if (!mounted || selectedProgram == null) {
+      return;
+    }
+
+    _applySavedProgram(selectedProgram);
   }
 
   void _clearOutput() {
@@ -491,55 +710,164 @@ int main()
     }
   }
 
+  void _insertSymbol(String symbol) {
+    final String currentText = _codeController.text;
+    final TextSelection selection = _codeController.selection;
+
+    final int start = selection.isValid
+        ? selection.start.clamp(0, currentText.length)
+        : currentText.length;
+
+    final int end = selection.isValid
+        ? selection.end.clamp(0, currentText.length)
+        : currentText.length;
+
+    final String updatedText = currentText.replaceRange(
+      start,
+      end,
+      symbol,
+    );
+
+    _codeController.value = TextEditingValue(
+      text: updatedText,
+      selection: TextSelection.collapsed(
+        offset: start + symbol.length,
+      ),
+    );
+
+    _editorFocusNode.requestFocus();
+  }
+
+  Widget _buildSymbolAccessoryBar() {
+    const List<String> symbols = <String>[
+      ';',
+      '{',
+      '}',
+      '(',
+      ')',
+      '[',
+      ']',
+      '"',
+      "'",
+      '#',
+      '<',
+      '>',
+      '=',
+      '+',
+      '-',
+      '*',
+      '/',
+      '%',
+      '&',
+      '|',
+      '!',
+      ':',
+      ',',
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: Container(
+        // কীবোর্ডের থিমের সাথে মানানসই সলিড নিউট্রাল ব্যাকগ্রাউন্ড কালার
+        color: const Color(0xFFE5E7EB),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 4,
+          ),
+          itemCount: symbols.length,
+          separatorBuilder: (
+            BuildContext context,
+            int index,
+          ) {
+            return const SizedBox(width: 5);
+          },
+          itemBuilder: (
+            BuildContext context,
+            int index,
+          ) {
+            final String symbol = symbols[index];
+
+            return OutlinedButton(
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                minimumSize: const Size(36, 32),
+                maximumSize: const Size(44, 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                ),
+                foregroundColor: Colors.black,
+                overlayColor: Colors.transparent,
+                side: BorderSide(color: Colors.grey.shade300),
+                textStyle: GoogleFonts.robotoMono(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onPressed: () {
+                _insertSymbol(symbol);
+              },
+              child: Text(symbol),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    
+    // শুধুমাত্র Code Editor-এ ফোকাস থাকা অবস্থায় এবং কিবোর্ড ওপেন থাকলে Symbol Bar দেখাবে
+    final bool showSymbolBar = keyboardOpen && _editorHasFocus;
+
+    final bool wideScreen =
+        MediaQuery.sizeOf(context).width >= _wideLayoutBreakpoint;
+    final bool showFloatingRunButton = !wideScreen && keyboardOpen;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
       appBar: AppBar(
         elevation: 0,
         centerTitle: false,
+        toolbarHeight: 52,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         title: const Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Student C Studio',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
+                height: 1.1,
               ),
             ),
             Text(
               'Write → Run → Learn',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.normal,
+                height: 1.1,
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'New Program',
-            onPressed: _newProgram,
-            icon: const Icon(Icons.note_add_outlined),
-          ),
-          IconButton(
-            tooltip: 'Load Sample',
-            onPressed: _loadSampleProgram,
-            icon: const Icon(Icons.code),
-          ),
-          IconButton(
             tooltip: 'Clear Output',
             onPressed: _clearOutput,
             icon: const Icon(
               Icons.cleaning_services_outlined,
+              size: 21,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
@@ -548,44 +876,68 @@ int main()
             BuildContext context,
             BoxConstraints constraints,
           ) {
-            final bool wideScreen = constraints.maxWidth >= 900;
+            final bool isWide = constraints.maxWidth >= _wideLayoutBreakpoint;
 
-            if (wideScreen) {
+            if (isWide) {
               return _buildWideLayout();
             }
 
-            return _buildNarrowLayout();
+            return _buildNarrowLayout(
+              keyboardOpen: keyboardOpen,
+              showSymbolBar: showSymbolBar,
+              availableHeight: constraints.maxHeight,
+            );
           },
         ),
       ),
+      floatingActionButton:
+          showFloatingRunButton ? _buildFloatingRunButton() : null,
       bottomNavigationBar: _buildStatusBar(),
+    );
+  }
+
+  Widget _buildFloatingRunButton() {
+    return FloatingActionButton(
+      heroTag: 'runProgramFab',
+      tooltip: _isRunning ? 'Running...' : 'Run',
+      onPressed: _isRunning ? null : _runProgram,
+      child: _isRunning
+          ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.play_arrow),
     );
   }
 
   Widget _buildWideLayout() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             flex: 3,
-            child: _buildEditorSection(),
+            child: _buildEditorSection(showActionButtons: true),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             flex: 2,
             child: Column(
               children: [
                 SizedBox(
-                  height: 165,
+                  height: 150,
                   child: _buildInputSection(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Expanded(
                   child: _buildOutputSection(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Expanded(
                   child: _buildBanglaExplanationSection(),
                 ),
@@ -597,36 +949,70 @@ int main()
     );
   }
 
-  Widget _buildNarrowLayout() {
+  Widget _buildNarrowLayout({
+    required bool keyboardOpen,
+    required bool showSymbolBar,
+    required double availableHeight,
+  }) {
+    const double collapsedPeekHeight = 34;
+    const double symbolBarHeight = 40.0;
+
+    final double minChildSize =
+        (collapsedPeekHeight / availableHeight).clamp(0.035, 0.12);
+
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-          child: _buildEditorSection(),
+          padding: EdgeInsets.fromLTRB(
+            10,
+            10,
+            10,
+            keyboardOpen ? (showSymbolBar ? 50 : 10) : 46,
+          ),
+          child: _buildEditorSection(showActionButtons: !keyboardOpen),
         ),
-        DraggableScrollableSheet(
-          controller: _curtainController,
-          initialChildSize: 0.055,
-          minChildSize: 0.055,
-          maxChildSize: 0.88,
-          snap: true,
-          snapSizes: const <double>[0.055, 0.72, 0.88],
-          builder: (
-            BuildContext context,
-            ScrollController scrollController,
-          ) {
-            return _buildCurtain(
-              scrollController,
-            );
-          },
+        
+        // Symbol Bar দৃশ্যমান থাকলে কার্টিনকে Symbol Bar-এর ঠিক উপরে তুলে দেওয়া
+        Positioned.fill(
+          bottom: showSymbolBar ? symbolBarHeight : 0,
+          child: DraggableScrollableSheet(
+            controller: _curtainController,
+            initialChildSize: minChildSize,
+            minChildSize: minChildSize,
+            maxChildSize: 0.92,
+            snap: true,
+            snapSizes: <double>[minChildSize, 0.84, 0.92],
+            builder: (
+              BuildContext context,
+              ScrollController scrollController,
+            ) {
+              return _buildCurtain(
+                scrollController,
+                keyboardOpen: keyboardOpen,
+              );
+            },
+          ),
         ),
+
+        // Symbol Bar শুধুমাত্র তখনই রেন্ডার হবে যখন Code Editor ফোকাসড থাকবে
+        if (showSymbolBar)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: symbolBarHeight,
+            child: _buildSymbolAccessoryBar(),
+          ),
       ],
     );
   }
 
   Widget _buildCurtain(
-    ScrollController scrollController,
-  ) {
+    ScrollController scrollController, {
+    required bool keyboardOpen,
+  }) {
+    final bool curtainExpanded = _curtainExtent > _curtainExpandedThreshold;
+
     return Material(
       elevation: 14,
       color: const Color(0xFFF4F6F8),
@@ -637,12 +1023,12 @@ int main()
       child: Column(
         children: [
           SizedBox(
-            height: 34,
+            height: 26,
             child: SingleChildScrollView(
               controller: scrollController,
               physics: const ClampingScrollPhysics(),
               child: const SizedBox(
-                height: 34,
+                height: 26,
                 child: Center(
                   child: _CurtainHandle(),
                 ),
@@ -650,66 +1036,41 @@ int main()
             ),
           ),
           Expanded(
-            child: Column(
-              children: [
-                _buildCurtainTabs(),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: IndexedStack(
-                      index: _curtainView.index,
+            child: curtainExpanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      8,
+                      0,
+                      8,
+                      8,
+                    ),
+                    child: Column(
                       children: [
-                        _buildInputSection(),
-                        _buildOutputSection(),
-                        _buildBanglaExplanationSection(),
+                        Expanded(
+                          flex: keyboardOpen ? 5 : 2,
+                          child: _buildInputSection(),
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          flex: keyboardOpen ? 2 : 5,
+                          child: _buildOutputSection(),
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          flex: keyboardOpen ? 2 : 2,
+                          child: _buildBanglaExplanationSection(),
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ],
-            ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCurtainTabs() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: SegmentedButton<_CurtainView>(
-        segments: const <ButtonSegment<_CurtainView>>[
-          ButtonSegment<_CurtainView>(
-            value: _CurtainView.input,
-            icon: Icon(Icons.keyboard_outlined),
-            label: Text('Input'),
-          ),
-          ButtonSegment<_CurtainView>(
-            value: _CurtainView.output,
-            icon: Icon(Icons.terminal),
-            label: Text('Output'),
-          ),
-          ButtonSegment<_CurtainView>(
-            value: _CurtainView.explanation,
-            icon: Icon(Icons.school_outlined),
-            label: Text('বাংলা'),
-          ),
-        ],
-        selected: <_CurtainView>{_curtainView},
-        showSelectedIcon: false,
-        onSelectionChanged: (Set<_CurtainView> selection) {
-          setState(() {
-            _curtainView = selection.first;
-            _curtainActivated = true;
-          });
-          _openCurtain();
-        },
-      ),
-    );
-  }
-
-  Widget _buildEditorSection() {
+  Widget _buildEditorSection({required bool showActionButtons}) {
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
@@ -719,8 +1080,10 @@ int main()
         children: [
           _buildPanelHeader(
             icon: Icons.description_outlined,
-            title: 'Program.c',
-            trailing: '${_codeController.text.length} characters',
+            title: _isSampleMode
+                ? 'Sample Program'
+                : _currentProgram?.displayName ?? 'Program.c',
+            trailing: '${_codeController.text.length} chars',
           ),
           const Divider(height: 1),
           Expanded(
@@ -739,6 +1102,8 @@ int main()
                     child: TextField(
                       controller: _codeController,
                       scrollController: _editorScrollController,
+                      focusNode: _editorFocusNode,
+                      onTap: _closeCurtain,
                       expands: true,
                       maxLines: null,
                       minLines: null,
@@ -752,7 +1117,7 @@ int main()
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(14),
                         hintText: 'এখানে C Program লিখুন...',
                         hintStyle: GoogleFonts.robotoMono(
                           color: Colors.white38,
@@ -765,8 +1130,11 @@ int main()
               ),
             ),
           ),
-          const Divider(height: 1),
-          _buildEditorButtons(),
+          if (showActionButtons) ...[
+            const Divider(height: 1),
+            _buildEditorButtons(),
+          ] else
+            const SizedBox(height: 6),
         ],
       ),
     );
@@ -774,11 +1142,11 @@ int main()
 
   Widget _buildLineNumberPanel() {
     return Container(
-      width: 52,
+      width: 48,
       color: const Color(0xFF252526),
       padding: const EdgeInsets.only(
-        top: 16,
-        right: 10,
+        top: 14,
+        right: 8,
       ),
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(),
@@ -806,36 +1174,100 @@ int main()
   }
 
   Widget _buildEditorButtons() {
+    final ButtonStyle compactButtonStyle = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 32),
+      maximumSize: const Size(double.infinity, 32),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 3,
+        vertical: 2,
+      ),
+      textStyle: const TextStyle(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w500,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+
+    final ButtonStyle runButtonStyle = FilledButton.styleFrom(
+      minimumSize: const Size(double.infinity, 30),
+      maximumSize: const Size(double.infinity, 30),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 3,
+        vertical: 2,
+      ),
+      textStyle: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+
     return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        alignment: WrapAlignment.end,
+      padding: const EdgeInsets.fromLTRB(
+        8,
+        6,
+        8,
+        6,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          OutlinedButton.icon(
-            onPressed: _newProgram,
-            icon: const Icon(
-              Icons.note_add_outlined,
-            ),
-            label: const Text('New Program'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: compactButtonStyle,
+                  onPressed: _storageReady ? _newProgram : null,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('New Program'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton(
+                  style: compactButtonStyle,
+                  onPressed: _loadSampleProgram,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Sample Program'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton(
+                  style: compactButtonStyle,
+                  onPressed: _storageReady ? _openMyPrograms : null,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('My Programs'),
+                  ),
+                ),
+              ),
+            ],
           ),
-          OutlinedButton.icon(
-            onPressed: _loadSampleProgram,
-            icon: const Icon(Icons.code),
-            label: const Text('Sample Program'),
-          ),
+          const SizedBox(height: 6),
           FilledButton.icon(
+            style: runButtonStyle,
             onPressed: _isRunning ? null : _runProgram,
             icon: _isRunning
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                     ),
                   )
-                : const Icon(Icons.play_arrow),
+                : const Icon(
+                    Icons.play_arrow,
+                    size: 20,
+                  ),
             label: Text(
               _isRunning ? 'Running...' : 'Run',
             ),
@@ -874,34 +1306,41 @@ int main()
           Expanded(
             child: Container(
               color: const Color(0xFFF8FAFC),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_inputValues.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: List<Widget>.generate(
-                          _inputValues.length,
-                          (int index) {
-                            return Chip(
-                              label: Text(
-                                '${index + 1} '
-                                '(${_formatLabelFor(requiredTypes[index])}): '
-                                '${_inputValues[index]}',
-                                style: GoogleFonts.robotoMono(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            );
-                          },
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: List<Widget>.generate(
+                              _inputValues.length,
+                              (int index) {
+                                return Chip(
+                                  label: Text(
+                                    '${index + 1} '
+                                    '(${_formatLabelFor(requiredTypes[index])}): '
+                                    '${_inputValues[index]}',
+                                    style: GoogleFonts.robotoMono(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  Expanded(
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: 46,
+                    ),
                     child: TextField(
                       controller: _inputController,
                       focusNode: _inputFocusNode,
@@ -930,7 +1369,7 @@ int main()
                         hintText: requiredCount == 0
                             ? 'Program-এ scanf() নেই'
                             : inputComplete
-                                ? 'সব ইনপুট নেওয়া সম্পন্ন'
+                                ? 'সব ইনপুট নেওয়া সম্পন্ন'
                                 : _inputHintFor(
                                     nextInputType!,
                                     enteredCount + 1,
@@ -940,8 +1379,8 @@ int main()
                           color: Colors.grey.shade600,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
+                          horizontal: 10,
+                          vertical: 8,
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1038,7 +1477,7 @@ int main()
             child: Container(
               width: double.infinity,
               color: const Color(0xFF111827),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: SingleChildScrollView(
                 child: SelectableText(
                   content,
@@ -1078,7 +1517,7 @@ int main()
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               color: Colors.deepPurple.shade50,
               child: SingleChildScrollView(
                 child: SelectableText(
@@ -1106,22 +1545,23 @@ int main()
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 11,
+        horizontal: 12,
+        vertical: 6,
       ),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 21,
+            size: 17,
             color: iconColor ?? Theme.of(context).colorScheme.primary,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           Expanded(
             child: Text(
               title,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14.5,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1130,7 +1570,7 @@ int main()
             Text(
               trailing,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -1161,23 +1601,23 @@ int main()
     }
 
     return Container(
-      height: 34,
+      height: 28,
       color: const Color(0xFF1F2937),
       padding: const EdgeInsets.symmetric(
-        horizontal: 14,
+        horizontal: 12,
       ),
       child: Row(
         children: [
           Icon(
             statusIcon,
-            size: 14,
+            size: 13,
             color: statusColor,
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 6),
           Text(
             statusText,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               color: Colors.white,
             ),
           ),
@@ -1185,23 +1625,23 @@ int main()
           Text(
             'Lines: $_lineCount',
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               color: Colors.white70,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           const Text(
             'C Language',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               color: Colors.white70,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           const Text(
-            'UTF-8',
+            'Jahirul Islam',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               color: Colors.white70,
             ),
           ),
@@ -1211,20 +1651,14 @@ int main()
   }
 }
 
-enum _CurtainView {
-  input,
-  output,
-  explanation,
-}
-
 class _CurtainHandle extends StatelessWidget {
   const _CurtainHandle();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 46,
-      height: 5,
+      width: 48,
+      height: 6,
       decoration: BoxDecoration(
         color: Colors.blueGrey.shade400,
         borderRadius: BorderRadius.circular(99),
