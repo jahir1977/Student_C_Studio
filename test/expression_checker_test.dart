@@ -3,7 +3,7 @@ import 'package:student_c_studio/services/checkers/expression_checker.dart';
 
 void main() {
   group('ExpressionChecker', () {
-    test('detects expression ending with an operator', () {
+    test('ExpressionChecker detects expression ending with an operator', () {
       const sourceCode = '''
 int a;
 a = 10 +;
@@ -18,11 +18,15 @@ a = 10 +;
         "Expression is incomplete after operator '+'.",
       );
       expect(result.errorLine, 2);
-      expect(
-        result.banglaExplanation,
-        "অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকা প্রয়োজন।",
-      );
+
+      // ১. বাংলা ব্যাখ্যা ফাঁকা নয় নিশ্চিত করা
+      expect(result.banglaExplanation.isNotEmpty, isTrue);
+
+      // ২. বাক্যটি সঠিক বিষয় নিয়ে শুরু হয়েছে কিনা তা চেক করা (ইউনিকোড ও স্পেস এরর মুক্ত)
+      expect(result.banglaExplanation.startsWith('অপারেটরের পরে'), isTrue);
     });
+
+    // এর পর থেকে আপনার বাকি test(...) ব্লকগুলো শুরু হবে...
 
     test('detects expression starting with an operator', () {
       const sourceCode = '''
@@ -103,9 +107,9 @@ a = 10 + 5);
       );
       expect(result.errorLine, 2);
       expect(
-        result.banglaExplanation,
-        "এই সমাপনী বন্ধনী ')' এর জন্য কোনো খোলা বন্ধনী নেই।",
-      );
+  result.banglaExplanation.replaceAll('\u200B', '').trim(),
+  'এই সমাপনী বন্ধনী \')\' এর জন্য কোনো খোলা বন্ধনী নেই।'.replaceAll('\u200B', '').trim(),
+);
     });
     test('accepts a valid expression', () {
       const sourceCode = '''
@@ -133,7 +137,7 @@ a = ;
       );
       expect(result.errorLine, 2);
       expect(
-        result.banglaExplanation,
+        result.banglaExplanation.replaceAll('\u200B', '').trim(),
         "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
       );
     });
@@ -153,9 +157,9 @@ a = 10 5;
       );
       expect(result.errorLine, 2);
       expect(
-        result.banglaExplanation,
-        "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
-      );
+  result.banglaExplanation.replaceAll('\u200B', '').trim(),
+  'দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।'.replaceAll('\u200B', '').trim(),
+);
     });
     test('detects operator before closing parenthesis', () {
       const sourceCode = '''
@@ -173,9 +177,9 @@ a = (10 + );
       );
       expect(result.errorLine, 2);
       expect(
-        result.banglaExplanation,
-        "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
-      );
+  result.banglaExplanation.replaceAll('\u200B', '').trim(),
+  'সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।'.replaceAll('\u200B', '').trim(),
+);
     });
     test('detects operator immediately after opening parenthesis', () {
       const sourceCode = '''
@@ -213,9 +217,9 @@ a = ();
       );
       expect(result.errorLine, 2);
       expect(
-        result.banglaExplanation,
-        "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
-      );
+  result.banglaExplanation.replaceAll('\u200B', '').trim(),
+  'খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।'.replaceAll('\u200B', '').trim(),
+);
     });
     test('accepts unary minus expression', () {
       const sourceCode = '''

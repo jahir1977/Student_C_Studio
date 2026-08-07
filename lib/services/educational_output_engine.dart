@@ -39,12 +39,31 @@ class _EducationalExecutor {
 
   bool _breakRequested = false;
   bool _continueRequested = false;
+  String? _gotoTarget;
 
   String execute(String code) {
     final String sanitizedCode = _removeComments(code);
     final String executableCode = _extractMainBody(sanitizedCode);
 
     _executeSource(executableCode);
+
+    int jumpCount = 0;
+
+    while (_gotoTarget != null &&
+        jumpCount < maximumLoopIterations &&
+        _output.length < maximumOutputLength) {
+      final String label = _gotoTarget!;
+      _gotoTarget = null;
+
+      final int? labelCursor = _findLabelCursor(executableCode, label);
+
+      if (labelCursor == null) {
+        break;
+      }
+
+      _executeSource(executableCode, startCursor: labelCursor);
+      jumpCount++;
+    }
 
     final String result = _output.toString();
 
@@ -55,11 +74,31 @@ class _EducationalExecutor {
     return result.substring(0, maximumOutputLength);
   }
 
-  void _executeSource(String source) {
-    int cursor = 0;
+  int? _findLabelCursor(String source, String label) {
+    final RegExp labelPattern = RegExp(
+      r'^\s*' + RegExp.escape(label) + r'\s*:',
+    );
+
+    int offset = 0;
+
+    for (final String line in source.split('\n')) {
+      final RegExpMatch? match = labelPattern.firstMatch(line);
+
+      if (match != null) {
+        return offset + match.end;
+      }
+
+      offset += line.length + 1;
+    }
+
+    return null;
+  }
+
+  void _executeSource(String source, {int startCursor = 0}) {
+    int cursor = startCursor;
 
     while (cursor < source.length && _output.length < maximumOutputLength) {
-      if (_breakRequested || _continueRequested) {
+      if (_breakRequested || _continueRequested || _gotoTarget != null) {
         return;
       }
 
@@ -67,6 +106,35 @@ class _EducationalExecutor {
 
       if (cursor >= source.length) {
         break;
+      }
+
+      final RegExpMatch? labelMatch = RegExp(
+        r'^([A-Za-z_][A-Za-z0-9_]*)\s*:(?!:)',
+      ).firstMatch(source.substring(cursor));
+
+      if (labelMatch != null) {
+        cursor += labelMatch.end;
+        continue;
+      }
+
+      if (_startsWithWord(source, cursor, 'goto')) {
+        final int statementEnd = _findStatementEnd(source, cursor);
+
+        if (statementEnd < 0) {
+          break;
+        }
+
+        final String statement = source.substring(cursor, statementEnd).trim();
+
+        final RegExpMatch? gotoMatch = RegExp(
+          r'^goto\s+([A-Za-z_][A-Za-z0-9_]*)$',
+        ).firstMatch(statement);
+
+        if (gotoMatch != null) {
+          _gotoTarget = gotoMatch.group(1);
+        }
+
+        return;
       }
 
       if (_startsWithWord(source, cursor, 'if')) {
@@ -295,6 +363,10 @@ class _EducationalExecutor {
         _output.length < maximumOutputLength) {
       _executeSource(body.source);
 
+      if (_gotoTarget != null) {
+        break;
+      }
+
       if (_breakRequested) {
         _breakRequested = false;
         break;
@@ -367,6 +439,10 @@ class _EducationalExecutor {
     do {
       _executeSource(body.source);
 
+      if (_gotoTarget != null) {
+        break;
+      }
+
       if (_breakRequested) {
         _breakRequested = false;
         break;
@@ -433,6 +509,10 @@ class _EducationalExecutor {
         iterationCount < maximumLoopIterations &&
         _output.length < maximumOutputLength) {
       _executeSource(body.source);
+
+      if (_gotoTarget != null) {
+        break;
+      }
 
       if (_breakRequested) {
         _breakRequested = false;
@@ -745,16 +825,32 @@ class _EducationalExecutor {
         variableName = variableName.substring(1).trim();
       }
 
-      if (!RegExp(
-        r'^[A-Za-z_][A-Za-z0-9_]*$',
-      ).hasMatch(variableName)) {
-        _inputCursor++;
+      final String token = _inputTokens[_inputCursor];
+      _inputCursor++;
+
+      final RegExpMatch? arrayMatch = RegExp(
+        r'^([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]$',
+      ).firstMatch(variableName);
+
+      if (arrayMatch != null) {
+        final String arrayName = arrayMatch.group(1)!;
+        final String indexExpression = arrayMatch.group(2)!.trim();
+
+        _assignScanfArrayValue(
+          arrayName,
+          indexExpression,
+          specifiers[index],
+          token,
+        );
+
         continue;
       }
 
-      final String token = _inputTokens[_inputCursor];
-
-      _inputCursor++;
+      if (!RegExp(
+        r'^[A-Za-z_][A-Za-z0-9_]*$',
+      ).hasMatch(variableName)) {
+        continue;
+      }
 
       _assignScanfValue(
         variableName,
@@ -764,6 +860,77 @@ class _EducationalExecutor {
     }
 
     return statementEnd + 1;
+  }
+
+  void _assignScanfArrayValue(
+    String arrayName,
+    String indexExpression,
+    _FormatSpecifier specifier,
+    String token,
+  ) {
+    final _VariableValue? arrayVariable = _variables[arrayName];
+
+    if (arrayVariable == null || arrayVariable.value is! List<Object?>) {
+      return;
+    }
+
+    final num? evaluatedIndex = _evaluateNumericExpression(indexExpression);
+
+    if (evaluatedIndex == null) {
+      return;
+    }
+
+    final int arrayIndex = evaluatedIndex.toInt();
+
+    final List<Object?> values = arrayVariable.value as List<Object?>;
+
+    if (arrayIndex < 0 || arrayIndex >= values.length) {
+      return;
+    }
+
+    Object? value;
+
+    switch (specifier.kind) {
+      case _FormatKind.integer:
+        value = int.tryParse(token);
+        break;
+
+      case _FormatKind.unsignedInteger:
+        final int? parsed = int.tryParse(token);
+        if (parsed != null && parsed >= 0) {
+          value = parsed;
+        }
+        break;
+
+      case _FormatKind.floatValue:
+      case _FormatKind.doubleValue:
+        value = double.tryParse(token);
+        break;
+
+      case _FormatKind.character:
+        if (token.isNotEmpty) {
+          value = String.fromCharCode(
+            token.runes.first,
+          );
+        }
+        break;
+
+      case _FormatKind.stringValue:
+        value = token;
+        break;
+    }
+
+    if (value == null) {
+      return;
+    }
+
+    values[arrayIndex] = _coerceValue(
+      value,
+      arrayVariable.type,
+      fallback: _defaultValueForType(
+        arrayVariable.type,
+      ),
+    );
   }
 
   void _assignScanfValue(
@@ -900,29 +1067,92 @@ class _EducationalExecutor {
     if (declarator.isEmpty) {
       return;
     }
-
     final RegExp arrayPattern = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)'
-      r'\s*\[[^\]]*\]'
+      r'\s*\[\s*([^\]]*)\s*\]'
       r'(?:\s*=\s*(.+))?$',
       dotAll: true,
     );
 
     final RegExpMatch? arrayMatch = arrayPattern.firstMatch(declarator);
 
-    if (arrayMatch != null && typeName == 'char') {
+    if (arrayMatch != null) {
       final String name = arrayMatch.group(1)!;
-      final String? initializer = arrayMatch.group(2)?.trim();
+      final String sizeExpression = arrayMatch.group(2)?.trim() ?? '';
+      final String? initializer = arrayMatch.group(3)?.trim();
 
-      String value = '';
+      if (typeName == 'char') {
+        String value = '';
 
-      if (initializer != null) {
-        value = _stripStringLiteral(initializer) ?? initializer;
+        if (initializer != null) {
+          value = _stripStringLiteral(initializer) ?? initializer;
+        }
+
+        _variables[name] = _VariableValue(
+          type: _CValueType.stringValue,
+          value: value,
+        );
+
+        return;
+      }
+
+      final _CValueType elementType = _typeFromDeclaration(typeName);
+      final Object defaultValue = _defaultValueForType(elementType);
+
+      int declaredSize = 0;
+
+      if (sizeExpression.isNotEmpty) {
+        final num? evaluatedSize = _evaluateNumericExpression(sizeExpression);
+
+        if (evaluatedSize != null && evaluatedSize > 0) {
+          declaredSize = evaluatedSize.toInt();
+        }
+      }
+
+      final List<Object?> initializerValues = <Object?>[];
+
+      if (initializer != null &&
+          initializer.startsWith('{') &&
+          initializer.endsWith('}')) {
+        final String initializerBody =
+            initializer.substring(1, initializer.length - 1).trim();
+
+        if (initializerBody.isNotEmpty) {
+          final List<String> values = _splitTopLevelArguments(initializerBody);
+
+          for (final String expression in values) {
+            initializerValues.add(
+              _coerceValue(
+                _evaluateValue(expression),
+                elementType,
+                fallback: defaultValue,
+              ),
+            );
+          }
+        }
+      }
+
+      if (declaredSize == 0 && initializerValues.isNotEmpty) {
+        declaredSize = initializerValues.length;
+      }
+
+      final List<Object?> arrayValues = List<Object?>.filled(
+        declaredSize,
+        defaultValue,
+        growable: false,
+      );
+
+      final int copyCount = initializerValues.length < arrayValues.length
+          ? initializerValues.length
+          : arrayValues.length;
+
+      for (int index = 0; index < copyCount; index++) {
+        arrayValues[index] = initializerValues[index];
       }
 
       _variables[name] = _VariableValue(
-        type: _CValueType.stringValue,
-        value: value,
+        type: elementType,
+        value: arrayValues,
       );
 
       return;
@@ -1197,7 +1427,56 @@ class _EducationalExecutor {
 
       return;
     }
+    final RegExp arrayAssignmentPattern = RegExp(
+      r'^([A-Za-z_][A-Za-z0-9_]*)'
+      r'\s*\[(.+)\]\s*=\s*(.+)$',
+      dotAll: true,
+    );
 
+    final RegExpMatch? arrayAssignmentMatch =
+        arrayAssignmentPattern.firstMatch(normalized);
+
+    if (arrayAssignmentMatch != null) {
+      final String arrayName = arrayAssignmentMatch.group(1)!;
+      final String indexExpression = arrayAssignmentMatch.group(2)!.trim();
+      final String valueExpression = arrayAssignmentMatch.group(3)!.trim();
+
+      final _VariableValue? arrayVariable = _variables[arrayName];
+
+      if (arrayVariable == null || arrayVariable.value is! List<Object?>) {
+        return;
+      }
+
+      final num? evaluatedIndex = _evaluateNumericExpression(indexExpression);
+
+      if (evaluatedIndex == null) {
+        return;
+      }
+
+      final int arrayIndex = evaluatedIndex.toInt();
+
+      final List<Object?> values = arrayVariable.value as List<Object?>;
+
+      if (arrayIndex < 0 || arrayIndex >= values.length) {
+        return;
+      }
+
+      final Object? value = _evaluateValue(valueExpression);
+
+      if (value == null) {
+        return;
+      }
+
+      values[arrayIndex] = _coerceValue(
+        value,
+        arrayVariable.type,
+        fallback: _defaultValueForType(
+          arrayVariable.type,
+        ),
+      );
+
+      return;
+    }
     final RegExp assignmentPattern = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$',
       dotAll: true,
@@ -1395,6 +1674,32 @@ class _EducationalExecutor {
       return characterLiteral;
     }
 
+    final RegExpMatch? arrayMatch = RegExp(
+      r'^([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]$',
+    ).firstMatch(normalized);
+
+    if (arrayMatch != null) {
+      final String arrayName = arrayMatch.group(1)!;
+      final String indexExpression = arrayMatch.group(2)!.trim();
+
+      final _VariableValue? arrayVariable = _variables[arrayName];
+
+      if (arrayVariable != null && arrayVariable.value is List<Object?>) {
+        final num? evaluatedIndex = _evaluateNumericExpression(indexExpression);
+
+        if (evaluatedIndex != null) {
+          final int arrayIndex = evaluatedIndex.toInt();
+          final List<Object?> values = arrayVariable.value as List<Object?>;
+
+          if (arrayIndex >= 0 && arrayIndex < values.length) {
+            return values[arrayIndex];
+          }
+        }
+      }
+
+      return null;
+    }
+
     final _VariableValue? variable = _variables[normalized];
 
     if (variable != null) {
@@ -1588,6 +1893,7 @@ class _EducationalExecutor {
     int start = 0;
     int parenthesisDepth = 0;
     int bracketDepth = 0;
+    int braceDepth = 0;
     bool insideSingleQuote = false;
     bool insideDoubleQuote = false;
     bool escaped = false;
@@ -1627,9 +1933,14 @@ class _EducationalExecutor {
         bracketDepth++;
       } else if (character == ']') {
         bracketDepth--;
+      } else if (character == '{') {
+        braceDepth++;
+      } else if (character == '}') {
+        braceDepth--;
       } else if (character == ',' &&
           parenthesisDepth == 0 &&
-          bracketDepth == 0) {
+          bracketDepth == 0 &&
+          braceDepth == 0) {
         arguments.add(
           source.substring(start, index).trim(),
         );
@@ -2294,9 +2605,7 @@ class _NumericExpressionParser {
       return null;
     }
 
-    if (RegExp(r'[0-9.]').hasMatch(
-      source[_cursor],
-    )) {
+    if (RegExp(r'[0-9.]').hasMatch(source[_cursor])) {
       return _parseNumber();
     }
 
@@ -2304,19 +2613,61 @@ class _NumericExpressionParser {
       return _parseCharacterLiteral();
     }
 
-    if (RegExp(r'[A-Za-z_]').hasMatch(
-      source[_cursor],
-    )) {
+    if (RegExp(r'[A-Za-z_]').hasMatch(source[_cursor])) {
       final int start = _cursor;
 
       while (_cursor < source.length &&
-          RegExp(r'[A-Za-z0-9_]').hasMatch(
-            source[_cursor],
-          )) {
+          RegExp(r'[A-Za-z0-9_]').hasMatch(source[_cursor])) {
         _cursor++;
       }
 
       final String variableName = source.substring(start, _cursor);
+
+      _skipWhitespace();
+
+      // Array element support:
+      // arr[0], arr[i], arr[i + 1], arr[2 * i]
+      if (_cursor < source.length && source[_cursor] == '[') {
+        _cursor++;
+
+        final num? indexValue = _parseAdditionSubtraction();
+
+        _skipWhitespace();
+
+        if (_cursor >= source.length || source[_cursor] != ']') {
+          return null;
+        }
+
+        _cursor++;
+
+        if (indexValue == null) {
+          return null;
+        }
+
+        final Object? arrayValue = variables[variableName]?.value;
+
+        if (arrayValue is! List<Object?>) {
+          return null;
+        }
+
+        final int arrayIndex = indexValue.toInt();
+
+        if (arrayIndex < 0 || arrayIndex >= arrayValue.length) {
+          return null;
+        }
+
+        final Object? element = arrayValue[arrayIndex];
+
+        if (element is num) {
+          return element;
+        }
+
+        if (element is String && element.runes.length == 1) {
+          return element.runes.first;
+        }
+
+        return null;
+      }
 
       final Object? value = variables[variableName]?.value;
 

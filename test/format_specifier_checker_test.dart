@@ -275,5 +275,59 @@ int main()
       );
       expect(result.errorLine, 4);
     });
+
+    // ==================================================
+    // Precision / width modifiers
+    // ==================================================
+
+    test('accepts %.2f for float variable', () {
+      const code = '''
+int main()
+{
+    float avg;
+    printf("Average = %.2f", avg);
+}
+''';
+
+      final checker = FormatSpecifierChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('accepts %5.2f and %05d with matching variables', () {
+      const code = '''
+int main()
+{
+    float total;
+    int count;
+    printf("Total = %5.2f, Count = %05d", total, count);
+}
+''';
+
+      final checker = FormatSpecifierChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('detects type mismatch through a precision specifier', () {
+      const code = '''
+int main()
+{
+    int total;
+    printf("Total = %.2f", total);
+}
+''';
+
+      final checker = FormatSpecifierChecker();
+      final result = checker.check(code);
+
+      expect(result.isSuccess, isFalse);
+      expect(
+        result.error,
+        "Format specifier '%f' does not match variable 'total'.",
+      );
+    });
   });
 }

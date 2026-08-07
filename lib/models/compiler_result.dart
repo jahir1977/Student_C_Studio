@@ -5,47 +5,53 @@ class CompilerResult {
   final String banglaExplanation;
   final int? errorLine;
 
-  const CompilerResult({
+  CompilerResult({
     required this.isSuccess,
-    required this.output,
-    required this.error,
-    required this.banglaExplanation,
+    this.output = '',
+    this.error = '',
+    String? banglaExplanation,
+    String? explanation,
     this.errorLine,
-  });
+  }) : banglaExplanation = (banglaExplanation ?? explanation ?? '')
+            .replaceAll('\u200B', '');
+
+  String get displayText {
+    if (isSuccess) return output;
+    if (errorLine != null) {
+      return 'Line $errorLine\n$error';
+    }
+    return error;
+  }
+
+  String get explanation => banglaExplanation;
 
   factory CompilerResult.success({
-    required String output,
-    String explanation = "Program executed successfully.",
+    String output = '',
+    String explanation = '',
+    String banglaExplanation = '',
   }) {
     return CompilerResult(
       isSuccess: true,
       output: output,
       error: '',
-      banglaExplanation: explanation,
+      banglaExplanation:
+          banglaExplanation.isNotEmpty ? banglaExplanation : explanation,
     );
   }
 
   factory CompilerResult.failure({
-    required String error,
-    required String explanation,
+    String error = '',
+    String explanation = '',
+    String banglaExplanation = '',
     int? errorLine,
   }) {
     return CompilerResult(
       isSuccess: false,
       output: '',
       error: error,
-      banglaExplanation: explanation,
+      banglaExplanation:
+          banglaExplanation.isNotEmpty ? banglaExplanation : explanation,
       errorLine: errorLine,
     );
-  }
-
-  String get displayText {
-    if (isSuccess) return output;
-
-    if (errorLine != null) {
-      return 'Line $errorLine\n$error';
-    }
-
-    return error;
   }
 }

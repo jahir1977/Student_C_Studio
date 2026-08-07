@@ -3,6 +3,7 @@ import '../../models/compiler_context.dart';
 import 'compiler_checker.dart';
 
 class DoWhileChecker implements CompilerChecker {
+  @override
   CompilerResult check(String code) {
     final String cleanedCode = _removeCommentsAndStrings(code);
     final RegExp doPattern = RegExp(r'\bdo\b');
@@ -49,8 +50,8 @@ class DoWhileChecker implements CompilerChecker {
         if (closingBraceIndex == -1) {
           /*
            * BraceChecker সাধারণত এই ভুল আগে ধরবে।
-           * Unit test চলার সময়ও checker যেন crash না করে,
-           * তাই নিরাপদে missing while result দেওয়া হচ্ছে।
+           * Unit test চলার সময়ও checker যেন crash না করে,
+           * তাই নিরাপদে missing while result দেওয়া হচ্ছে।
            */
           return _missingWhileResult(doLine);
         }
@@ -370,7 +371,6 @@ class DoWhileChecker implements CompilerChecker {
         } else {
           cleaned.write(' ');
         }
-
         continue;
       }
 
@@ -385,7 +385,6 @@ class DoWhileChecker implements CompilerChecker {
         } else {
           cleaned.write(' ');
         }
-
         continue;
       }
 
@@ -393,7 +392,7 @@ class DoWhileChecker implements CompilerChecker {
         if (character == '\n') {
           cleaned.write('\n');
         } else {
-          cleaned.write(' ');
+          cleaned.write('a');
         }
 
         if (escaped) {
@@ -432,13 +431,13 @@ class DoWhileChecker implements CompilerChecker {
       }
 
       if (character == '"') {
-        cleaned.write(' ');
+        cleaned.write('a');
         inDoubleQuote = true;
         continue;
       }
 
       if (character == "'") {
-        cleaned.write(' ');
+        cleaned.write('a');
         inSingleQuote = true;
         continue;
       }

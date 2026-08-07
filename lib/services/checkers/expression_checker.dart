@@ -3,6 +3,7 @@ import '../../models/compiler_context.dart';
 import 'compiler_checker.dart';
 
 class ExpressionChecker implements CompilerChecker {
+  @override
   CompilerResult check(String sourceCode) {
     final ternaryResult = _checkTernaryOperators(sourceCode);
 
@@ -19,13 +20,25 @@ class ExpressionChecker implements CompilerChecker {
 
       final line = _maskQuotedLiterals(rawLine);
 
+      // ১. কমেন্ট ও প্রি-প্রসেসর (#include) এড়িয়ে যাওয়া
+      if (rawLine.startsWith('//') || rawLine.startsWith('#')) continue;
+
+      // ২. ইনক্রিমেন্ট/ডিক্রিমেন্ট (যেমন: i++; বা ++i;) এড়িয়ে যাওয়া
+      if (RegExp(r'(\+\+|--)\s*;?$').hasMatch(line)) continue;
+
+      // ৩. ExpressionChecker কেবল সেই লাইনগুলোই চেক করবে যেগুলোতে অ্যাসাইনমেন্ট (=) আছে।
+      // (তবে ==, <=, >=, != এর মতো শর্তযুক্ত সমতাকে অ্যাসাইনমেন্ট হিসেবে ধরবে না)
+      final hasAssignment = RegExp(r'(?<![=!<>])=(?![=])').hasMatch(line);
+
+      // যদি অ্যাসাইনমেন্ট না থাকে (যেমন: while (i <= n); বা return 0;), তবে এটি স্কিপ করবে
+      if (!hasAssignment) continue;
+
       final emptyRightSideMatch = RegExp(r'=\s*;$').firstMatch(line);
 
       if (emptyRightSideMatch != null) {
         return CompilerResult.failure(
           error: "Expression expected after '='.",
-          explanation:
-              "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
+          explanation: "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -37,7 +50,7 @@ class ExpressionChecker implements CompilerChecker {
 
         return CompilerResult.failure(
           error: "Expression is incomplete after operator '$operator'.",
-          explanation: "অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকা প্রয়োজন।",
+          explanation: "অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকা প্রয়োজন।",
           errorLine: i + 1,
         );
       }
@@ -49,8 +62,7 @@ class ExpressionChecker implements CompilerChecker {
 
         return CompilerResult.failure(
           error: "Expression cannot start with operator '$operator'.",
-          explanation:
-              "অ্যাসাইনমেন্ট চিহ্নের পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
+          explanation: "অ্যাসাইনমেন্ট চিহ্নের পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
           errorLine: i + 1,
         );
       }
@@ -76,8 +88,7 @@ class ExpressionChecker implements CompilerChecker {
       if (operatorBeforeClosingParenthesis != null) {
         return CompilerResult.failure(
           error: "Expression is incomplete before closing parenthesis.",
-          explanation:
-              "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
+          explanation: "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -93,15 +104,12 @@ class ExpressionChecker implements CompilerChecker {
         );
       }
 
-      // শুধু assignment-এর ডান পাশে () থাকলে empty parenthesis ধরা হবে।
-      // main(), printf(), scanf() ইত্যাদি function call এখানে ধরা হবে না।
       final emptyParenthesisMatch = RegExp(r'=\s*\(\s*\)\s*;').firstMatch(line);
 
       if (emptyParenthesisMatch != null) {
         return CompilerResult.failure(
           error: "Empty parenthesis is not allowed.",
-          explanation:
-              "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
+          explanation: "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -116,7 +124,7 @@ class ExpressionChecker implements CompilerChecker {
         if (missingOperatorMatch != null) {
           return CompilerResult.failure(
             error: "Operator expected between operands.",
-            explanation: "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
+            explanation: "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
             errorLine: i + 1,
           );
         }
@@ -136,7 +144,7 @@ class ExpressionChecker implements CompilerChecker {
       if (closingParenthesisCount > openingParenthesisCount) {
         return CompilerResult.failure(
           error: "Extra closing parenthesis ')'.",
-          explanation: "এই সমাপনী বন্ধনী ')' এর জন্য কোনো খোলা বন্ধনী নেই।",
+          explanation: "এই সমাপনী বন্ধনী ')' এর জন্য কোনো খোলা বন্ধনী নেই। ",
           errorLine: i + 1,
         );
       }
@@ -159,31 +167,31 @@ class ExpressionChecker implements CompilerChecker {
       final String character = line[i];
 
       if (escaped) {
-        masked.write(insideDoubleQuote || insideSingleQuote ? ' ' : character);
+        masked.write('a');
         escaped = false;
         continue;
       }
 
       if ((insideDoubleQuote || insideSingleQuote) && character == r'\') {
-        masked.write(' ');
+        masked.write('a');
         escaped = true;
         continue;
       }
 
       if (!insideSingleQuote && character == '"') {
         insideDoubleQuote = !insideDoubleQuote;
-        masked.write(character);
+        masked.write('"');
         continue;
       }
 
       if (!insideDoubleQuote && character == "'") {
         insideSingleQuote = !insideSingleQuote;
-        masked.write(character);
+        masked.write("'");
         continue;
       }
 
       if (insideDoubleQuote || insideSingleQuote) {
-        masked.write(' ');
+        masked.write('a');
       } else {
         masked.write(character);
       }
@@ -215,7 +223,6 @@ class ExpressionChecker implements CompilerChecker {
             insideBlockComment = false;
             charIndex++;
           }
-
           continue;
         }
 
@@ -267,7 +274,6 @@ class ExpressionChecker implements CompilerChecker {
               charIndex: charIndex,
             ),
           );
-
           continue;
         }
 
@@ -281,12 +287,10 @@ class ExpressionChecker implements CompilerChecker {
             if (!isSwitchLabel && line.contains('=')) {
               return CompilerResult.failure(
                 error: "Ternary operator is missing '?'.",
-                explanation:
-                    "শর্তের পরে '?' চিহ্ন ব্যবহার করে সত্য মানটি লিখতে হবে।",
+                explanation: "শর্তের পরে '?' চিহ্ন ব্যবহার করে সত্য মানটি লিখতে হবে।",
                 errorLine: lineIndex + 1,
               );
             }
-
             continue;
           }
 
@@ -303,8 +307,7 @@ class ExpressionChecker implements CompilerChecker {
           if (_isExpressionEmpty(trueExpression)) {
             return CompilerResult.failure(
               error: "True expression is missing after '?'.",
-              explanation:
-                  "'?' চিহ্নের পরে শর্ত সত্য হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
+              explanation: "'?' চিহ্নের পরে শর্ত সত্য হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
               errorLine: question.lineNumber,
             );
           }
@@ -316,8 +319,7 @@ class ExpressionChecker implements CompilerChecker {
               remainingText.startsWith(')')) {
             return CompilerResult.failure(
               error: "False expression is missing after ':'.",
-              explanation:
-                  "':' চিহ্নের পরে শর্ত মিথ্যা হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
+              explanation: "':' চিহ্নের পরে শর্ত মিথ্যা হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
               errorLine: lineIndex + 1,
             );
           }
@@ -330,8 +332,7 @@ class ExpressionChecker implements CompilerChecker {
 
       return CompilerResult.failure(
         error: "Ternary operator is missing ':'.",
-        explanation:
-            "'?' চিহ্নের পরে সত্য মান এবং ':' চিহ্নের পরে মিথ্যা মান লিখতে হবে।",
+        explanation: "'?' চিহ্নের পরে সত্য মান এবং ':' চিহ্নের পরে মিথ্যা মান লিখতে হবে।",
         errorLine: question.lineNumber,
       );
     }
@@ -350,7 +351,6 @@ class ExpressionChecker implements CompilerChecker {
       final secondOperator = match.group(2)!;
 
       final isIncrement = firstOperator == '+' && secondOperator == '+';
-
       final isDecrement = firstOperator == '-' && secondOperator == '-';
 
       if (isIncrement || isDecrement) {

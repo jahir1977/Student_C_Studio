@@ -164,39 +164,40 @@ class PointerChecker {
     }
 
     if (initializer.startsWith('&')) {
-      final String addressedValue = initializer.substring(1).trim();
+  final String addressedValue = initializer.substring(1).trim();
 
-      if (_isLiteralValue(addressedValue)) {
-        return CompilerResult.failure(
-          error: 'Cannot take address of a literal value.',
-          explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
-              '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
-          errorLine: lineNumber,
-        );
-      }
+  if (_isLiteralValue(addressedValue)) {
+    return CompilerResult.failure(
+      error: 'Cannot take address of a literal value.',
+      explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
+          '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
 
-      if (!_isValidIdentifier(addressedValue) ||
-          !variables.containsKey(addressedValue)) {
-        return CompilerResult.failure(
-          error: 'Addressed variable is not declared.',
-          explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
-              'ভেরিয়েবলটি ঘোষণা করতে হবে।',
-          errorLine: lineNumber,
-        );
-      }
+  final String? baseName = _extractBaseIdentifier(addressedValue);
 
-      final String variableType = variables[addressedValue]!.type;
+  if (baseName == null || !variables.containsKey(baseName)) {
+    return CompilerResult.failure(
+      error: 'Addressed variable is not declared.',
+      explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+          'ভেরিয়েবলটি ঘোষণা করতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
 
-      if (pointerType != variableType) {
-        return _pointerVariableTypeMismatch(
-          pointerType: pointerType,
-          variableType: variableType,
-          lineNumber: lineNumber,
-        );
-      }
+  final String variableType = variables[baseName]!.type;
 
-      return null;
-    }
+  if (pointerType != variableType) {
+    return _pointerVariableTypeMismatch(
+      pointerType: pointerType,
+      variableType: variableType,
+      lineNumber: lineNumber,
+    );
+  }
+
+  return null;
+}
 
     if (_isValidIdentifier(initializer) && pointers.containsKey(initializer)) {
       final String sourcePointerType = pointers[initializer]!.baseType;
@@ -432,38 +433,40 @@ class PointerChecker {
     final String destinationType = pointers[leftSide]!.baseType;
 
     if (rightSide.startsWith('&')) {
-      final String addressedValue = rightSide.substring(1).trim();
+  final String addressedValue = rightSide.substring(1).trim();
 
-      if (_isLiteralValue(addressedValue)) {
-        return CompilerResult.failure(
-          error: 'Cannot take address of a literal value.',
-          explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
-              '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
-          errorLine: lineNumber,
-        );
-      }
+  if (_isLiteralValue(addressedValue)) {
+    return CompilerResult.failure(
+      error: 'Cannot take address of a literal value.',
+      explanation: 'সরাসরি কোনো সংখ্যার ঠিকানা নেওয়া যায় না। '
+          '& চিহ্নের পরে ঘোষিত ভেরিয়েবলের নাম দিতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
 
-      if (!variables.containsKey(addressedValue)) {
-        return CompilerResult.failure(
-          error: 'Addressed variable is not declared.',
-          explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
-              'ভেরিয়েবলটি ঘোষণা করতে হবে।',
-          errorLine: lineNumber,
-        );
-      }
+  final String? baseName = _extractBaseIdentifier(addressedValue);
 
-      final String variableType = variables[addressedValue]!.type;
+  if (baseName == null || !variables.containsKey(baseName)) {
+    return CompilerResult.failure(
+      error: 'Addressed variable is not declared.',
+      explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+          'ভেরিয়েবলটি ঘোষণা করতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
 
-      if (destinationType != variableType) {
-        return _pointerVariableTypeMismatch(
-          pointerType: destinationType,
-          variableType: variableType,
-          lineNumber: lineNumber,
-        );
-      }
+  final String variableType = variables[baseName]!.type;
 
-      return null;
-    }
+  if (destinationType != variableType) {
+    return _pointerVariableTypeMismatch(
+      pointerType: destinationType,
+      variableType: variableType,
+      lineNumber: lineNumber,
+    );
+  }
+
+  return null;
+}
 
     if (pointers.containsKey(rightSide)) {
       final String sourceType = pointers[rightSide]!.baseType;
@@ -598,29 +601,28 @@ class PointerChecker {
       }
 
       if (argument.startsWith('&')) {
-        final String name = argument.substring(1).trim();
+  final String addressedValue = argument.substring(1).trim();
+  final String? baseName = _extractBaseIdentifier(addressedValue);
 
-        if (pointers.containsKey(name)) {
-          return CompilerResult.failure(
-            error: 'Do not use & before a pointer in scanf.',
-            explanation: '$name নিজেই একটি ঠিকানা সংরক্ষণ করে। scanf() ফাংশনে '
-                'পয়েন্টার ব্যবহার করলে তার আগে অতিরিক্ত & চিহ্ন '
-                'দিতে হবে না।',
-            errorLine: lineNumber,
-          );
-        }
-
-        if (!variables.containsKey(name)) {
-          return CompilerResult.failure(
-            error: 'Addressed variable is not declared.',
-            explanation: '$name ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
-                'ভেরিয়েবলটি ঘোষণা করতে হবে।',
-            errorLine: lineNumber,
-          );
-        }
-
-        continue;
-      }
+  if (baseName != null && pointers.containsKey(baseName)) {
+    return CompilerResult.failure(
+      error: 'Do not use & before a pointer in scanf.',
+      explanation: '$baseName নিজেই একটি ঠিকানা সংরক্ষণ করে। scanf() ফাংশনে '
+          'পয়েন্টার ব্যবহার করলে তার আগে অতিরিক্ত & চিহ্ন '
+          'দিতে হবে না।',
+      errorLine: lineNumber,
+    );
+  }
+  if (baseName == null || !variables.containsKey(baseName)) {
+    return CompilerResult.failure(
+      error: 'Addressed variable is not declared.',
+      explanation: '$addressedValue ভেরিয়েবলটির ঠিকানা নেওয়ার আগে '
+          'ভেরিয়েবলটি ঘোষণা করতে হবে।',
+      errorLine: lineNumber,
+    );
+  }
+  continue;
+}
 
       if (pointers.containsKey(argument)) {
         continue;
@@ -687,6 +689,13 @@ class PointerChecker {
           'একই হতে হবে।',
       errorLine: lineNumber,
     );
+   }
+    static String? _extractBaseIdentifier(String value) {
+    final Match? match = RegExp(
+      r'^([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]+\]\s*)*$',
+    ).firstMatch(value.trim());
+
+    return match?.group(1);
   }
 
   static bool _isValidIdentifier(String value) {

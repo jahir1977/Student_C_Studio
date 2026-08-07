@@ -159,9 +159,9 @@ class FormatSpecifierChecker implements CompilerChecker {
   }
 
   List<String> _extractFormatSpecifiers(String formatString) {
-    return RegExp(r'%(?:lf|[A-Za-z])')
+    return RegExp(r'%[-+0 #]*\d*(?:\.\d+)?(lf|[A-Za-z])')
         .allMatches(formatString)
-        .map((match) => match.group(0)!)
+        .map((match) => '%${match.group(1)}')
         .toList();
   }
 

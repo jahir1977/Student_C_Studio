@@ -69,6 +69,10 @@ int main()
 
   bool _storageReady = false;
 
+  // সোর্স কোডে scanf() লেখা যতবার আছে তার হিসাবে নয়, বরং লুপের ভেতরের
+  // scanf()-কে বারবার মান নেওয়ার (repeatable) সুযোগ দেওয়া হয়েছে কিনা তার state।
+  bool _repeatableInputConfirmed = false;
+
   bool _isSampleMode = false;
 
   bool _editorHasFocus = false;
@@ -144,7 +148,10 @@ int main()
 
     final int requiredCount = _requiredInputCount();
 
-    if (_inputValues.length > requiredCount) {
+    // Repeatable (loop-এর ভেতরের) শেষ scanf()-এর জন্য ইউজার ন্যূনতম সংখ্যার
+    // চেয়ে বেশি মান দিয়ে থাকতে পারে (যেমন: অ্যারে ফিল করার সময়) — সেগুলো
+    // কেটে ফেলা যাবে না।
+    if (_inputValues.length > requiredCount && !_hasRepeatableTailInput()) {
       setState(() {
         _inputValues.removeRange(
           requiredCount,
@@ -226,6 +233,7 @@ int main()
 
     _inputController.clear();
     _inputValues.clear();
+    _repeatableInputConfirmed = false;
 
     setState(() {
       _currentProgram = program;
@@ -250,16 +258,74 @@ int main()
     }
   }
 
-  List<_ScanfInputType> _requiredInputTypes() {
+  // scanf() টেক্সট সোর্স কোডে কতবার লেখা আছে সেটা গুনেই আগে ইনপুট ফিল্ড
+  // সংখ্যা ঠিক হতো। কিন্তু for/while/do-while লুপের ভেতরে থাকা একটা scanf()
+  // রানটাইমে বহুবার execute হতে পারে (যেমন: অ্যারে ফিল করার সময়)। তাই এখন
+  // প্রতিটা লুপকে আগে বিশ্লেষণ করা হয় — যদি লুপের বাউন্ড (যেমন
+  // `for (i = 0; i < 5; i++)`) সম্পূর্ণ লিটারেল সংখ্যার উপর নির্ভর করে
+  // (কোনো ভ্যারিয়েবল/ইনপুটের উপর না), তাহলে ঠিক কতবার লুপ চলবে তা প্রোগ্রাম
+  // না চালিয়েই গণনা করা যায় — সেক্ষেত্রে ঠিক ততগুলো ফিক্সড ইনপুট স্লট
+  // বানানো হয়। বাউন্ড যদি runtime-নির্ভর হয় (যেমন আগের একটা scanf() থেকে
+  // পাওয়া n), তখন সংখ্যা আগে থেকে জানা সম্ভব না — তাই সেই scanf()-কে
+  // repeatable ধরা হয়, আর UI-তে ইউজার নিজে "✓ ইনপুট শেষ" বাটনে চেপে জানাবে।
+  List<_ScanfInputSlot> _requiredInputSlots() {
+    final String source = _codeController.text;
+    final List<_LoopRange> loopRanges = _findLoopRanges(source);
+
     final RegExp scanfPattern = RegExp(
       r'scanf\s*\(\s*"((?:\\.|[^"\\])*)"',
       multiLine: true,
     );
 
-    final List<_ScanfInputType> inputTypes = <_ScanfInputType>[];
+    final List<_ScanfInputSlot> inputSlots = <_ScanfInputSlot>[];
 
-    for (final RegExpMatch match
-        in scanfPattern.allMatches(_codeController.text)) {
+    for (final RegExpMatch match in scanfPattern.allMatches(source)) {
+      final List<_LoopRange> containingRanges = loopRanges
+          .where(
+            (_LoopRange range) =>
+                match.start >= range.start && match.start < range.end,
+          )
+          .toList();
+
+      // নেস্টেড লুপ হলে (যেমন ২ডি অ্যারে ফিল) প্রতিটা লুপের ইটারেশন সংখ্যা
+      // গুণ করে মোট repeat সংখ্যা বের করা হচ্ছে। কোনো একটা লুপের বাউন্ড
+      // অজানা হলে পুরো ফলাফলই অজানা (null) হয়ে যাবে।
+      int? fixedRepeatCount;
+
+      if (containingRanges.isNotEmpty) {
+        fixedRepeatCount = 1;
+
+        for (final _LoopRange range in containingRanges) {
+          if (range.iterationCount == null) {
+            fixedRepeatCount = null;
+            break;
+          }
+
+          fixedRepeatCount = fixedRepeatCount! * range.iterationCount!;
+        }
+
+        const int maxFixedSlots = 200;
+
+        if (fixedRepeatCount != null && fixedRepeatCount > maxFixedSlots) {
+          // অনেক বড় লুপের জন্য শতশত ফিক্সড ফিল্ড বানানো UI-এর জন্য
+          // অস্বাভাবিক — তাই সেক্ষেত্রে repeatable মোডেই ফিরে যাওয়া হচ্ছে।
+          fixedRepeatCount = null;
+        }
+      }
+
+      final bool repeatable =
+          containingRanges.isNotEmpty && fixedRepeatCount == null;
+
+      final int repeatTimes = fixedRepeatCount ?? 1;
+
+      void addSlot(_ScanfInputType type) {
+        for (int repeat = 0; repeat < repeatTimes; repeat++) {
+          inputSlots.add(
+            _ScanfInputSlot(type: type, repeatable: repeatable),
+          );
+        }
+      }
+
       final String format = match.group(1) ?? '';
 
       int index = 0;
@@ -289,7 +355,7 @@ int main()
         }
 
         if (format.startsWith('lf', specifierIndex)) {
-          inputTypes.add(_ScanfInputType.doubleValue);
+          addSlot(_ScanfInputType.doubleValue);
           index = specifierIndex + 2;
           continue;
         }
@@ -299,19 +365,19 @@ int main()
         switch (specifier) {
           case 'd':
           case 'i':
-            inputTypes.add(_ScanfInputType.integer);
+            addSlot(_ScanfInputType.integer);
             break;
           case 'u':
-            inputTypes.add(_ScanfInputType.unsignedInteger);
+            addSlot(_ScanfInputType.unsignedInteger);
             break;
           case 'f':
-            inputTypes.add(_ScanfInputType.floatValue);
+            addSlot(_ScanfInputType.floatValue);
             break;
           case 'c':
-            inputTypes.add(_ScanfInputType.character);
+            addSlot(_ScanfInputType.character);
             break;
           case 's':
-            inputTypes.add(_ScanfInputType.stringValue);
+            addSlot(_ScanfInputType.stringValue);
             break;
         }
 
@@ -319,21 +385,60 @@ int main()
       }
     }
 
-    return inputTypes;
+    return inputSlots;
+  }
+
+  List<_ScanfInputType> _requiredInputTypes() {
+    return _requiredInputSlots()
+        .map((_ScanfInputSlot slot) => slot.type)
+        .toList();
   }
 
   int _requiredInputCount() {
     return _requiredInputTypes().length;
   }
 
-  void _submitInputValue(String value) {
-    final List<_ScanfInputType> requiredTypes = _requiredInputTypes();
+  // শেষ scanf() স্লটটা কোনো লুপের ভেতরে থাকলে true — অর্থাৎ ন্যূনতম সংখ্যক
+  // মান দেওয়ার পরও ইউজারকে আরও মান (যেমন: অ্যারের বাকি এলিমেন্ট) দেওয়ার
+  // সুযোগ রাখা দরকার, এবং কখন শেষ হবে তা ইউজার নিজে জানাবে।
+  bool _hasRepeatableTailInput() {
+    final List<_ScanfInputSlot> slots = _requiredInputSlots();
+    return slots.isNotEmpty && slots.last.repeatable;
+  }
 
-    if (_inputValues.length >= requiredTypes.length) {
+  bool _isInputReady() {
+    final int requiredCount = _requiredInputCount();
+
+    if (_inputValues.length < requiredCount) {
+      return false;
+    }
+
+    if (_hasRepeatableTailInput() && !_repeatableInputConfirmed) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void _submitInputValue(String value) {
+    final List<_ScanfInputSlot> requiredSlots = _requiredInputSlots();
+
+    if (requiredSlots.isEmpty) {
       return;
     }
 
-    final _ScanfInputType expectedType = requiredTypes[_inputValues.length];
+    final bool withinFixedSlots = _inputValues.length < requiredSlots.length;
+    final bool tailRepeatable = requiredSlots.last.repeatable;
+
+    if (!withinFixedSlots && !tailRepeatable) {
+      // নির্দিষ্ট সংখ্যক ইনপুট আগেই দেওয়া শেষ, আর শেষ scanf() কোনো লুপে নেই —
+      // তাই আর নতুন মান নেওয়ার দরকার নেই।
+      return;
+    }
+
+    final _ScanfInputType expectedType = withinFixedSlots
+        ? requiredSlots[_inputValues.length].type
+        : requiredSlots.last.type;
 
     final String normalizedValue = value.trim();
 
@@ -352,14 +457,32 @@ int main()
       _inputController.clear();
     });
 
-    if (_inputValues.length >= requiredTypes.length) {
+    final bool nowWithinFixedSlots = _inputValues.length < requiredSlots.length;
+
+    if (!nowWithinFixedSlots && !tailRepeatable) {
+      // ফিক্সড (loop-বিহীন) সব scanf() পূরণ হয়ে গেছে — আগের মতোই সরাসরি Run।
       _inputFocusNode.unfocus();
 
       if (_curtainActivated) {
         Future<void>.microtask(_compileAndShowResult);
       }
     } else {
+      // হয় এখনো ফিক্সড স্লট বাকি আছে, অথবা শেষ scanf() লুপে আছে — তাই
+      // ফিল্ড খোলা রাখা হচ্ছে, ইউজার চাইলে আরও মান দিতে পারবে। Repeatable
+      // ক্ষেত্রে "ইনপুট শেষ" বাটন চাপার আগ পর্যন্ত Run হবে না।
       _inputFocusNode.requestFocus();
+    }
+  }
+
+  void _confirmRepeatableInputAndRun() {
+    setState(() {
+      _repeatableInputConfirmed = true;
+    });
+
+    _inputFocusNode.unfocus();
+
+    if (_curtainActivated) {
+      Future<void>.microtask(_compileAndShowResult);
     }
   }
 
@@ -492,6 +615,7 @@ int main()
 
     setState(() {
       _inputValues.removeLast();
+      _repeatableInputConfirmed = false;
     });
 
     _inputFocusNode.requestFocus();
@@ -515,12 +639,12 @@ int main()
     setState(() {
       _inputController.clear();
       _inputValues.clear();
+      _repeatableInputConfirmed = false;
       _result = null;
       _banglaExplanation = 'নতুন Input দিন, Run সম্পন্ন হলে ফলাফল দেখাবে।';
     });
 
-    final int requiredCount = _requiredInputCount();
-    final bool needsInput = _inputValues.length < requiredCount;
+    final bool needsInput = !_isInputReady();
 
     setState(() {
       _curtainActivated = true;
@@ -560,9 +684,11 @@ int main()
       input: _inputValues.join('\n'),
     );
 
-    final String explanation = result.banglaExplanation.trim().isNotEmpty
-        ? result.banglaExplanation
-        : _banglaErrorService.explain(result.error);
+    final String explanation = result.isSuccess
+        ? 'প্রোগ্রাম সফলভাবে Run করেছে।'
+        : (result.banglaExplanation.trim().isNotEmpty
+            ? result.banglaExplanation
+            : _banglaErrorService.explain(result.error));
 
     if (!mounted) {
       return;
@@ -657,6 +783,7 @@ int main()
 
     _inputController.clear();
     _inputValues.clear();
+    _repeatableInputConfirmed = false;
 
     setState(() {
       _currentProgram = null;
@@ -703,6 +830,7 @@ int main()
     setState(() {
       _inputController.clear();
       _inputValues.clear();
+      _repeatableInputConfirmed = false;
     });
 
     if (_requiredInputCount() > 0) {
@@ -820,7 +948,7 @@ int main()
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    
+
     // শুধুমাত্র Code Editor-এ ফোকাস থাকা অবস্থায় এবং কিবোর্ড ওপেন থাকলে Symbol Bar দেখাবে
     final bool showSymbolBar = keyboardOpen && _editorHasFocus;
 
@@ -971,7 +1099,7 @@ int main()
           ),
           child: _buildEditorSection(showActionButtons: !keyboardOpen),
         ),
-        
+
         // Symbol Bar দৃশ্যমান থাকলে কার্টিনকে Symbol Bar-এর ঠিক উপরে তুলে দেওয়া
         Positioned.fill(
           bottom: showSymbolBar ? symbolBarHeight : 0,
@@ -1278,16 +1406,33 @@ int main()
   }
 
   Widget _buildInputSection() {
-    final List<_ScanfInputType> requiredTypes = _requiredInputTypes();
+    final List<_ScanfInputSlot> requiredSlots = _requiredInputSlots();
+    final List<_ScanfInputType> requiredTypes =
+        requiredSlots.map((_ScanfInputSlot slot) => slot.type).toList();
 
     final int requiredCount = requiredTypes.length;
     final int enteredCount = _inputValues.length;
-    final bool inputComplete =
-        requiredCount > 0 && enteredCount >= requiredCount;
+    final bool tailRepeatable = _hasRepeatableTailInput();
+
+    // repeatable (loop-এর ভেতরের) শেষ scanf()-এর ক্ষেত্রে ন্যূনতম সংখ্যা
+    // পূরণ হলেও ফিল্ড lock হবে না — ইউজার নিজে "ইনপুট শেষ" বাটনে না চাপা
+    // পর্যন্ত আরও মান নেওয়া যাবে।
+    final bool inputComplete = requiredCount > 0 &&
+        enteredCount >= requiredCount &&
+        (!tailRepeatable || _repeatableInputConfirmed);
+
     final bool inputEnabled = requiredCount > 0 && !inputComplete;
 
-    final _ScanfInputType? nextInputType =
-        inputEnabled ? requiredTypes[enteredCount] : null;
+    final bool awaitingRepeatableConfirmation = requiredCount > 0 &&
+        enteredCount >= requiredCount &&
+        tailRepeatable &&
+        !_repeatableInputConfirmed;
+
+    final _ScanfInputType? nextInputType = inputEnabled
+        ? (enteredCount < requiredCount
+            ? requiredTypes[enteredCount]
+            : requiredTypes.last)
+        : null;
 
     return Card(
       elevation: 2,
@@ -1300,7 +1445,9 @@ int main()
             icon: Icons.keyboard_outlined,
             iconColor: Colors.teal,
             title: 'Program Input (stdin)',
-            trailing: '$enteredCount / $requiredCount',
+            trailing: tailRepeatable
+                ? '$enteredCount / $requiredCount+'
+                : '$enteredCount / $requiredCount',
           ),
           const Divider(height: 1),
           Expanded(
@@ -1321,10 +1468,18 @@ int main()
                             children: List<Widget>.generate(
                               _inputValues.length,
                               (int index) {
+                                // repeatable (loop) স্লটের জন্য _inputValues
+                                // -এর দৈর্ঘ্য requiredTypes-এর চেয়ে বেশি হতে
+                                // পারে — তখন শেষ টাইপটাই বারবার প্রযোজ্য।
+                                final _ScanfInputType typeForChip =
+                                    index < requiredTypes.length
+                                        ? requiredTypes[index]
+                                        : requiredTypes.last;
+
                                 return Chip(
                                   label: Text(
                                     '${index + 1} '
-                                    '(${_formatLabelFor(requiredTypes[index])}): '
+                                    '(${_formatLabelFor(typeForChip)}): '
                                     '${_inputValues[index]}',
                                     style: GoogleFonts.robotoMono(
                                       fontWeight: FontWeight.w600,
@@ -1370,10 +1525,12 @@ int main()
                             ? 'Program-এ scanf() নেই'
                             : inputComplete
                                 ? 'সব ইনপুট নেওয়া সম্পন্ন'
-                                : _inputHintFor(
-                                    nextInputType!,
-                                    enteredCount + 1,
-                                  ),
+                                : awaitingRepeatableConfirmation
+                                    ? 'আরও মান দিন, অথবা ✓ বাটনে চেপে Run করুন'
+                                    : _inputHintFor(
+                                        nextInputType!,
+                                        enteredCount + 1,
+                                      ),
                         hintStyle: GoogleFonts.robotoMono(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -1403,6 +1560,15 @@ int main()
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (awaitingRepeatableConfirmation)
+                              IconButton(
+                                tooltip: 'ইনপুট শেষ, Run করুন',
+                                onPressed: _confirmRepeatableInputAndRun,
+                                icon: const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                              ),
                             if (_inputValues.isNotEmpty)
                               IconButton(
                                 tooltip: 'Remove Last Value',
@@ -1674,4 +1840,278 @@ enum _ScanfInputType {
   doubleValue,
   character,
   stringValue,
+}
+
+/// একটা scanf() ফরম্যাট-স্পেসিফায়ার থেকে তৈরি হওয়া ইনপুট স্লট।
+/// [repeatable] true মানে এই scanf() কল কোনো for/while/do-while লুপের
+/// শরীরের ভেতরে আছে — তাই রানটাইমে একাধিকবার এক্সিকিউট হতে পারে, এবং
+/// UI-কে এই টাইপের জন্য একাধিক মান নেওয়ার সুযোগ দিতে হবে।
+class _ScanfInputSlot {
+  const _ScanfInputSlot({
+    required this.type,
+    required this.repeatable,
+  });
+
+  final _ScanfInputType type;
+  final bool repeatable;
+}
+
+/// সোর্স কোডে একটা লুপ বডির ক্যারেক্টার রেঞ্জ [start, end)। [iterationCount]
+/// জানা থাকলে (শুধুমাত্র for-লুপে, যখন বাউন্ড সম্পূর্ণ লিটারেল সংখ্যার
+/// উপর নির্ভর করে) এটা লুপটা ঠিক কতবার চলবে তা বহন করে — অন্যথায় null।
+class _LoopRange {
+  const _LoopRange(this.start, this.end, {this.iterationCount});
+
+  final int start;
+  final int end;
+  final int? iterationCount;
+}
+
+/// সোর্স কোডে for/while/do-while লুপের বডি (ব্রেস দিয়ে ঘেরা অংশ) খুঁজে বের
+/// করে তাদের ক্যারেক্টার রেঞ্জ রিটার্ন করে। শুধুমাত্র brace ({ }) দিয়ে ঘেরা
+/// বডি হ্যান্ডেল করা হয় — সিঙ্গেল-স্টেটমেন্ট (ব্রেসবিহীন) লুপ বডি এই
+/// হেল্পারের আওতার বাইরে, কারণ শিক্ষার্থীদের প্রোগ্রামে সেটা বিরল এবং
+/// UI-এর জন্য শুধু "লুপের ভেতরে scanf() আছে কিনা" বোঝাই যথেষ্ট।
+List<_LoopRange> _findLoopRanges(String source) {
+  final List<_LoopRange> ranges = <_LoopRange>[];
+  final RegExp headerPattern = RegExp(r'\b(for|while|do)\b');
+
+  for (final RegExpMatch header in headerPattern.allMatches(source)) {
+    final String keyword = header.group(1)!;
+
+    if (keyword == 'do') {
+      int probe = header.end;
+
+      while (probe < source.length && RegExp(r'\s').hasMatch(source[probe])) {
+        probe++;
+      }
+
+      if (probe >= source.length || source[probe] != '{') {
+        continue;
+      }
+
+      final int braceEnd = _matchBrace(source, probe);
+
+      if (braceEnd < 0) {
+        continue;
+      }
+
+      ranges.add(_LoopRange(probe, braceEnd + 1));
+      continue;
+    }
+
+    // for / while: এরপর সবার আগে যে '(' পাওয়া যাবে সেটাই হেডারের শুরু,
+    // যদি মাঝে শুধু হোয়াইটস্পেস থাকে (নাহলে এটা for/while শব্দ থেকে অন্য
+    // কোনো আইডেন্টিফায়ারের অংশ, বা মিলবে না)।
+    int headerProbe = header.end;
+
+    while (headerProbe < source.length &&
+        RegExp(r'\s').hasMatch(source[headerProbe])) {
+      headerProbe++;
+    }
+
+    if (headerProbe >= source.length || source[headerProbe] != '(') {
+      continue;
+    }
+
+    final int parenEnd = _matchParen(source, headerProbe);
+
+    if (parenEnd < 0) {
+      continue;
+    }
+
+    int bodyProbe = parenEnd + 1;
+
+    while (bodyProbe < source.length &&
+        RegExp(r'\s').hasMatch(source[bodyProbe])) {
+      bodyProbe++;
+    }
+
+    if (bodyProbe >= source.length || source[bodyProbe] != '{') {
+      continue;
+    }
+
+    final int braceEnd = _matchBrace(source, bodyProbe);
+
+    if (braceEnd < 0) {
+      continue;
+    }
+
+    // for-লুপের ক্ষেত্রে বাউন্ড লিটারেল সংখ্যার উপর নির্ভর করলে ঠিক কতবার
+    // চলবে তা এখনই গণনা করা সম্ভব — নাহলে (while, অথবা variable-নির্ভর
+    // বাউন্ডের for) iterationCount অজানা (null) থেকে যায়।
+    final int? iterationCount = keyword == 'for'
+        ? _computeForLoopIterationCount(
+            source.substring(headerProbe + 1, parenEnd),
+          )
+        : null;
+
+    ranges.add(
+      _LoopRange(bodyProbe, braceEnd + 1, iterationCount: iterationCount),
+    );
+  }
+
+  return ranges;
+}
+
+/// `for (init; condition; update)` হেডার থেকে (প্যারেনথিসিসের ভেতরের অংশ)
+/// ঠিক কতবার লুপ চলবে তা বের করার চেষ্টা করে — একমাত্র তখনই যখন init,
+/// condition, update সবগুলোই লিটারেল সংখ্যার উপর নির্ভরশীল (কোনো
+/// ভ্যারিয়েবল/scanf() থেকে পাওয়া মানের উপর না)। সম্ভব না হলে null।
+int? _computeForLoopIterationCount(String header) {
+  final List<String> sections = <String>[];
+
+  int depth = 0;
+  int sectionStart = 0;
+
+  for (int index = 0; index < header.length; index++) {
+    final String character = header[index];
+
+    if (character == '(') {
+      depth++;
+    } else if (character == ')') {
+      depth--;
+    } else if (character == ';' && depth == 0) {
+      sections.add(header.substring(sectionStart, index));
+      sectionStart = index + 1;
+    }
+  }
+
+  sections.add(header.substring(sectionStart));
+
+  if (sections.length != 3) {
+    return null;
+  }
+
+  final String initSection = sections[0].trim();
+  final String conditionSection = sections[1].trim();
+  final String updateSection = sections[2].trim();
+
+  final RegExpMatch? initMatch = RegExp(
+    r'^(?:int\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([-+]?\d+)$',
+  ).firstMatch(initSection);
+
+  if (initMatch == null) {
+    return null;
+  }
+
+  final String variable = initMatch.group(1)!;
+  int value = int.parse(initMatch.group(2)!);
+
+  final RegExpMatch? conditionMatch = RegExp(
+    r'^' + RegExp.escape(variable) + r'\s*(<=|>=|!=|<|>)\s*([-+]?\d+)$',
+  ).firstMatch(conditionSection);
+
+  if (conditionMatch == null) {
+    return null;
+  }
+
+  final String operator = conditionMatch.group(1)!;
+  final int bound = int.parse(conditionMatch.group(2)!);
+
+  int? step;
+
+  final RegExpMatch? incrementMatch = RegExp(
+    r'^' + RegExp.escape(variable) + r'\s*(\+\+|--)$',
+  ).firstMatch(updateSection);
+
+  if (incrementMatch != null) {
+    step = incrementMatch.group(1) == '++' ? 1 : -1;
+  } else {
+    final RegExpMatch? compoundMatch = RegExp(
+      r'^' + RegExp.escape(variable) + r'\s*(\+=|-=)\s*(\d+)$',
+    ).firstMatch(updateSection);
+
+    if (compoundMatch != null) {
+      final int magnitude = int.parse(compoundMatch.group(2)!);
+      step = compoundMatch.group(1) == '+=' ? magnitude : -magnitude;
+    } else {
+      final RegExpMatch? assignmentUpdateMatch = RegExp(
+        r'^' +
+            RegExp.escape(variable) +
+            r'\s*=\s*' +
+            RegExp.escape(variable) +
+            r'\s*([+\-])\s*(\d+)$',
+      ).firstMatch(updateSection);
+
+      if (assignmentUpdateMatch != null) {
+        final int magnitude = int.parse(assignmentUpdateMatch.group(2)!);
+
+        step = assignmentUpdateMatch.group(1) == '+' ? magnitude : -magnitude;
+      }
+    }
+  }
+
+  if (step == null || step == 0) {
+    return null;
+  }
+
+  bool conditionHolds(int current) {
+    switch (operator) {
+      case '<':
+        return current < bound;
+      case '<=':
+        return current <= bound;
+      case '>':
+        return current > bound;
+      case '>=':
+        return current >= bound;
+      case '!=':
+        return current != bound;
+    }
+
+    return false;
+  }
+
+  const int maxIterationsToCount = 500;
+
+  int count = 0;
+
+  while (conditionHolds(value)) {
+    count++;
+
+    if (count > maxIterationsToCount) {
+      return null;
+    }
+
+    value += step;
+  }
+
+  return count;
+}
+
+int _matchParen(String source, int openIndex) {
+  int depth = 0;
+
+  for (int index = openIndex; index < source.length; index++) {
+    if (source[index] == '(') {
+      depth++;
+    } else if (source[index] == ')') {
+      depth--;
+
+      if (depth == 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+int _matchBrace(String source, int openIndex) {
+  int depth = 0;
+
+  for (int index = openIndex; index < source.length; index++) {
+    if (source[index] == '{') {
+      depth++;
+    } else if (source[index] == '}') {
+      depth--;
+
+      if (depth == 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
 }

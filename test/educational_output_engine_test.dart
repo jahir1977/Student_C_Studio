@@ -1877,5 +1877,264 @@ printf("%.2f", average);
 ''';
       expect(engine.execute(code, input: '10.5\n20.5'), '15.50');
     });
+
+    // ==================================================
+    // goto / label support
+    // ==================================================
+
+    test('supports goto loop that sums numbers up to n', () {
+      const String code = '''
+int i = 1, n, sum = 0;
+scanf("%d", &n);
+level:
+sum = sum + i;
+i++;
+if(i <= n)
+    goto level;
+printf("Sum = %d", sum);
+''';
+      expect(engine.execute(code, input: '5'), 'Sum = 15');
+    });
+
+    test('label declaration alone does not block the next statement', () {
+      const String code = '''
+int sum = 0;
+start:
+sum = sum + 1;
+printf("%d", sum);
+''';
+      expect(engine.execute(code), '1');
+    });
+
+    // ==================================================
+    // Array element access
+    // ==================================================
+
+    test('reads a single array element directly', () {
+      const String code = '''
+int arr[3];
+scanf("%d", &arr[0]);
+printf("%d", arr[0]);
+''';
+      expect(engine.execute(code, input: '7'), '7');
+    });
+
+    test('supports array element inside an arithmetic expression', () {
+      const String code = '''
+int arr[10], i, s = 0;
+for(i = 0; i < 10; i++)
+{
+    scanf("%d", &arr[i]);
+}
+for(i = 0; i < 10; i++)
+{
+    s = s + arr[i];
+}
+printf("sum=%d", s);
+''';
+      expect(
+        engine.execute(code, input: '1 2 3 4 5 6 7 8 9 10'),
+        'sum=55',
+      );
+    });
+    test('supports direct array element assignment', () {
+      const String code = '''
+int arr[3];
+arr[0] = 10;
+arr[1] = 20;
+arr[2] = 30;
+printf("%d", arr[1]);
+''';
+
+      expect(
+        engine.execute(code),
+        '20',
+      );
+    });
+    test('supports array initializer list', () {
+      const String code = '''
+int arr[5] = {10, 20, 30, 40, 50};
+printf("%d", arr[2]);
+''';
+
+      expect(
+        engine.execute(code),
+        '30',
+      );
+    });
+
+    test('supports inferred array size from initializer', () {
+      const String code = '''
+int arr[] = {5, 10, 15};
+printf("%d", arr[2]);
+''';
+
+      expect(
+        engine.execute(code),
+        '15',
+      );
+    });
+    test('finds largest value in an array', () {
+      const String code = '''
+int arr[5] = {12, 45, 7, 89, 34};
+int i, largest;
+
+largest = arr[0];
+
+for(i = 1; i < 5; i++)
+{
+    if(arr[i] > largest)
+    {
+        largest = arr[i];
+    }
+}
+
+printf("%d", largest);
+''';
+
+      expect(
+        engine.execute(code),
+        '89',
+      );
+    });
+    test('calculates sum of array elements', () {
+      const String code = '''
+int arr[5] = {10, 20, 30, 40, 50};
+int i, sum = 0;
+
+for(i = 0; i < 5; i++)
+{
+    sum = sum + arr[i];
+}
+
+printf("%d", sum);
+''';
+
+      expect(
+        engine.execute(code),
+        '150',
+      );
+    });
+    test('calculates average of array elements', () {
+      const String code = '''
+int arr[5] = {10, 20, 30, 40, 50};
+int i, sum = 0;
+float avg;
+
+for(i = 0; i < 5; i++)
+{
+    sum = sum + arr[i];
+}
+
+avg = sum / 5.0;
+
+printf("%.2f", avg);
+''';
+
+      expect(
+        engine.execute(code),
+        '30.00',
+      );
+    });
+    test('prints array elements in reverse order', () {
+      const String code = '''
+int arr[5] = {10, 20, 30, 40, 50};
+int i;
+
+for(i = 4; i >= 0; i--)
+{
+    printf("%d ", arr[i]);
+}
+''';
+
+      expect(
+        engine.execute(code),
+        '50 40 30 20 10 ',
+      );
+    });
+    test('searches an element in an array', () {
+      const String code = '''
+int arr[5] = {10, 20, 30, 40, 50};
+int i, key = 30, found = 0;
+
+for(i = 0; i < 5; i++)
+{
+    if(arr[i] == key)
+    {
+        found = 1;
+        break;
+    }
+}
+
+printf("%d", found);
+''';
+
+      expect(
+        engine.execute(code),
+        '1',
+      );
+    });
+    test('counts even numbers in an array', () {
+      const String code = '''
+int arr[6] = {10, 15, 20, 21, 30, 41};
+int i, count = 0;
+
+for(i = 0; i < 6; i++)
+{
+    if(arr[i] % 2 == 0)
+    {
+        count++;
+    }
+}
+
+printf("%d", count);
+''';
+
+      expect(
+        engine.execute(code),
+        '3',
+      );
+    });
+    test('copies one array into another', () {
+      const String code = '''
+int a[5] = {10, 20, 30, 40, 50};
+int b[5];
+int i;
+
+for(i = 0; i < 5; i++)
+{
+    b[i] = a[i];
+}
+
+printf("%d %d %d %d %d",
+    b[0], b[1], b[2], b[3], b[4]);
+''';
+
+      expect(
+        engine.execute(code),
+        '10 20 30 40 50',
+      );
+    });
+    test('counts occurrences of a value in an array', () {
+      const String code = '''
+int arr[8] = {10, 20, 10, 30, 10, 40, 20, 10};
+int i, count = 0;
+
+for(i = 0; i < 8; i++)
+{
+    if(arr[i] == 10)
+    {
+        count++;
+    }
+}
+
+printf("%d", count);
+''';
+
+      expect(
+        engine.execute(code),
+        '4',
+      );
+    });
   });
 }
