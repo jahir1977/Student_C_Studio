@@ -1684,16 +1684,36 @@ class _EducationalExecutor {
 
       final _VariableValue? arrayVariable = _variables[arrayName];
 
-      if (arrayVariable != null && arrayVariable.value is List<Object?>) {
-        final num? evaluatedIndex = _evaluateNumericExpression(indexExpression);
+      final num? evaluatedIndex = _evaluateNumericExpression(indexExpression);
 
-        if (evaluatedIndex != null) {
-          final int arrayIndex = evaluatedIndex.toInt();
-          final List<Object?> values = arrayVariable.value as List<Object?>;
+      if (arrayVariable == null || evaluatedIndex == null) {
+        return null;
+      }
 
-          if (arrayIndex >= 0 && arrayIndex < values.length) {
-            return values[arrayIndex];
-          }
+      final int arrayIndex = evaluatedIndex.toInt();
+
+      if (arrayVariable.value is List<Object?>) {
+        final List<Object?> values = arrayVariable.value as List<Object?>;
+
+        if (arrayIndex >= 0 && arrayIndex < values.length) {
+          return values[arrayIndex];
+        }
+
+        return null;
+      }
+
+      // char array / C string support
+      if (arrayVariable.value is String) {
+        final String text = arrayVariable.value as String;
+        final List<int> runes = text.runes.toList();
+
+        if (arrayIndex >= 0 && arrayIndex < runes.length) {
+          return String.fromCharCode(runes[arrayIndex]);
+        }
+
+        // C string-এর শেষে implicit null terminator
+        if (arrayIndex == runes.length) {
+          return '\x00';
         }
       }
 
