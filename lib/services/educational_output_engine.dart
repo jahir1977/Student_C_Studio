@@ -2651,16 +2651,40 @@ class _NumericExpressionParser {
       if (_cursor < source.length && source[_cursor] == '(') {
         _cursor++;
 
-        final num? argument = _parseAdditionSubtraction();
+        final num? firstArgument = _parseAdditionSubtraction();
+
+        if (firstArgument == null) {
+          return null;
+        }
 
         _skipWhitespace();
 
-        if (!_match(')') || argument == null) {
+        if (variableName == 'pow') {
+          if (!_match(',')) {
+            return null;
+          }
+
+          final num? secondArgument = _parseAdditionSubtraction();
+
+          _skipWhitespace();
+
+          if (secondArgument == null || !_match(')')) {
+            return null;
+          }
+
+          return math.pow(
+            firstArgument.toDouble(),
+            secondArgument.toDouble(),
+          );
+        }
+
+        if (!_match(')')) {
           return null;
         }
+
         switch (variableName) {
           case 'sqrt':
-            return math.sqrt(argument.toDouble());
+            return math.sqrt(firstArgument.toDouble());
           default:
             return null;
         }

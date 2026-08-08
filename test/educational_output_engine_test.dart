@@ -2137,17 +2137,30 @@ printf("%d", count);
       );
     });
     test('supports sqrt function', () {
-  const String code = '''
+      const String code = '''
 float x = 4;
 float result;
 result = sqrt(x);
 printf("%f", result);
 ''';
 
-  expect(
-    engine.execute(code),
-    '2.000000',
-  );
-});
+      expect(
+        engine.execute(code),
+        '2.000000',
+      );
+    });
+    test('supports pow function', () {
+      const String code = '''
+float x = 2;
+float result;
+result = pow(x, 3);
+printf("%f", result);
+''';
+
+      expect(
+        engine.execute(code),
+        '8.000000',
+      );
+    });
   });
 }
