@@ -1305,6 +1305,9 @@ class _EducationalExecutor {
     if (normalized.isEmpty) {
       return;
     }
+    if (RegExp(r'^getch\s*\(\s*\)$').hasMatch(normalized)) {
+      return;
+    }
 
     // এখানে strcpy block বসবে
     final RegExpMatch? strcpyMatch = RegExp(
@@ -1755,6 +1758,7 @@ class _EducationalExecutor {
       return null;
     }
 // এখানে strcmp block
+
     final RegExpMatch? strcmpMatch = RegExp(
       r'^strcmp\s*\(\s*(.+)\s*,\s*(.+)\s*\)$',
     ).firstMatch(normalized);

@@ -2246,5 +2246,16 @@ printf("%s", first);
         'Hello World',
       );
     });
+    test('supports getch function', () {
+      const String code = '''
+printf("Program finished");
+getch();
+''';
+
+      expect(
+        engine.execute(code),
+        'Program finished',
+      );
+    });
   });
 }
