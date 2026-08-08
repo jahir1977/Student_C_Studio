@@ -1691,7 +1691,23 @@ class _EducationalExecutor {
 
       return null;
     }
+// এখানে strcmp block
+    final RegExpMatch? strcmpMatch = RegExp(
+      r'^strcmp\s*\(\s*(.+)\s*,\s*(.+)\s*\)$',
+    ).firstMatch(normalized);
 
+    if (strcmpMatch != null) {
+      final Object? firstValue = _evaluateValue(strcmpMatch.group(1)!.trim());
+
+      final Object? secondValue = _evaluateValue(strcmpMatch.group(2)!.trim());
+
+      if (firstValue is String && secondValue is String) {
+        return firstValue.compareTo(secondValue);
+      }
+
+      return null;
+    }
+// এখানে array block
     final RegExpMatch? arrayMatch = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]$',
     ).firstMatch(normalized);

@@ -2188,5 +2188,35 @@ printf("%d", length);
         '10',
       );
     });
+    test('supports strcmp function for equal strings', () {
+  const String code = '''
+char first[30] = "Bangladesh";
+char second[30] = "Bangladesh";
+int result;
+result = strcmp(first, second);
+printf("%d", result);
+''';
+
+  expect(
+    engine.execute(code),
+    '0',
+  );
+});
+test('supports strcmp function for different strings', () {
+  const String code = '''
+char first[30] = "Apple";
+char second[30] = "Banana";
+int result;
+result = strcmp(first, second);
+printf("%d", result);
+''';
+
+  final String output = engine.execute(code);
+
+  expect(
+    int.parse(output),
+    lessThan(0),
+  );
+});
   });
 }
