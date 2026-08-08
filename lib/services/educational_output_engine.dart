@@ -1676,6 +1676,22 @@ class _EducationalExecutor {
       return characterLiteral;
     }
 
+// এখানে strlen function বসবে
+    final RegExpMatch? strlenMatch = RegExp(
+      r'^strlen\s*\(\s*(.+)\s*\)$',
+    ).firstMatch(normalized);
+
+    if (strlenMatch != null) {
+      final String argumentExpression = strlenMatch.group(1)!.trim();
+      final Object? argumentValue = _evaluateValue(argumentExpression);
+
+      if (argumentValue is String) {
+        return argumentValue.runes.length;
+      }
+
+      return null;
+    }
+
     final RegExpMatch? arrayMatch = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]$',
     ).firstMatch(normalized);

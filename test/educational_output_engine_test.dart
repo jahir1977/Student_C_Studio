@@ -2175,5 +2175,18 @@ printf("%.2f", result);
         '7.25',
       );
     });
+    test('supports strlen function', () {
+      const String code = '''
+char word[30] = "Bangladesh";
+int length;
+length = strlen(word);
+printf("%d", length);
+''';
+
+      expect(
+        engine.execute(code),
+        '10',
+      );
+    });
   });
 }
