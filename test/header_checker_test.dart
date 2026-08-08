@@ -118,7 +118,7 @@ int main()
       expect(result.error, "Missing header file 'string.h'.");
       expect(
         result.banglaExplanation,
-        "strlen() অথবা strcmp() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
+        "strlen() অথবা strcmp() অথবা strcpy() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
       );
       expect(result.errorLine, 3);
     });

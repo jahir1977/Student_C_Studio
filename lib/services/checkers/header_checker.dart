@@ -40,12 +40,13 @@ class HeaderChecker implements CompilerChecker {
       }
 
       if (_containsFunction(line, 'strlen') ||
-          _containsFunction(line, 'strcmp')) {
+    _containsFunction(line, 'strcmp') ||
+    _containsFunction(line, 'strcpy')) {
         if (!hasString) {
           return CompilerResult.failure(
             error: "Missing header file 'string.h'.",
             explanation:
-                "strlen() অথবা strcmp() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
+                "strlen() অথবা strcmp() অথবা strcpy() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
             errorLine: i + 1,
           );
         }
@@ -125,12 +126,13 @@ class HeaderChecker implements CompilerChecker {
       }
 
       if (_containsFunction(line, 'strlen') ||
-          _containsFunction(line, 'strcmp')) {
+    _containsFunction(line, 'strcmp') ||
+    _containsFunction(line, 'strcpy')) {
         if (!hasString) {
           return CompilerResult.failure(
             error: "Missing header file 'string.h'.",
             explanation:
-                "strlen() অথবা strcmp() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
+                "strlen() অথবা  strcmp() অথবা strcpy() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
             errorLine: i + 1,
           );
         }

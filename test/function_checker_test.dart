@@ -13,6 +13,7 @@ void main() {
 • fabs()
 • strlen()
 • strcmp()
+• strcpy()
 • getch()
 ''';
 

@@ -12,6 +12,7 @@ class FunctionChecker implements CompilerChecker {
     'fabs',
     'strlen',
     'strcmp',
+    'strcpy',
     'getch',
   };
 
@@ -76,6 +77,7 @@ class FunctionChecker implements CompilerChecker {
 • fabs()
 • strlen()
 • strcmp()
+• strcpy()
 • getch()
 """,
           errorLine: index + 1,

@@ -2218,5 +2218,18 @@ printf("%d", result);
     lessThan(0),
   );
 });
+test('supports strcpy function', () {
+  const String code = '''
+char source[30] = "Bangladesh";
+char destination[30];
+strcpy(destination, source);
+printf("%s", destination);
+''';
+
+  expect(
+    engine.execute(code),
+    'Bangladesh',
+  );
+});
   });
 }

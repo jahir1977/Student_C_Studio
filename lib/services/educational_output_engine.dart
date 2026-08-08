@@ -1306,6 +1306,35 @@ class _EducationalExecutor {
       return;
     }
 
+    // এখানে strcpy block বসবে
+    final RegExpMatch? strcpyMatch = RegExp(
+      r'^strcpy\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(.+)\s*\)$',
+      dotAll: true,
+    ).firstMatch(normalized);
+
+    if (strcpyMatch != null) {
+      final String destinationName = strcpyMatch.group(1)!;
+      final String sourceExpression = strcpyMatch.group(2)!.trim();
+
+      final Object? sourceValue = _evaluateValue(sourceExpression);
+
+      if (sourceValue is! String) {
+        return;
+      }
+
+      final _VariableValue? destination = _variables[destinationName];
+
+      if (destination == null || destination.type != _CValueType.stringValue) {
+        return;
+      }
+
+      _variables[destinationName] = _VariableValue(
+        type: _CValueType.stringValue,
+        value: sourceValue,
+      );
+
+      return;
+    }
     final RegExp postfixPattern = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)\s*(\+\+|--)$',
     );
