@@ -23,9 +23,6 @@ class ProgramStorageService {
   static const String _currentProgramIdKey =
       'student_c_studio.current_program_id.v1';
 
-  static const String _nextProgramNumberKey =
-      'student_c_studio.next_program_number.v1';
-
   Future<List<SavedProgram>> loadPrograms() async {
     final SharedPreferences preferences = await SharedPreferences.getInstance();
 
@@ -91,15 +88,17 @@ class ProgramStorageService {
   Future<SavedProgram> createProgram({
     String sourceCode = '',
   }) async {
-    final List<SavedProgram> programs = await loadPrograms();
+    List<SavedProgram> programs = await loadPrograms();
 
     if (programs.length >= maximumPrograms) {
       throw const ProgramStorageLimitException();
     }
 
-    final SharedPreferences preferences = await SharedPreferences.getInstance();
+    // পুরোনো data-তে কোনো numbering gap থাকলেও
+    // নতুন Program তৈরির আগে 1, 2, 3... করে নেওয়া হবে।
+    programs = _renumberPrograms(programs);
 
-    final int programNumber = preferences.getInt(_nextProgramNumberKey) ?? 1;
+    final int programNumber = programs.length + 1;
 
     final DateTime now = DateTime.now();
 
@@ -115,10 +114,7 @@ class ProgramStorageService {
 
     await _savePrograms(programs);
 
-    await preferences.setInt(
-      _nextProgramNumberKey,
-      programNumber + 1,
-    );
+    final SharedPreferences preferences = await SharedPreferences.getInstance();
 
     await preferences.setString(
       _currentProgramIdKey,
@@ -170,24 +166,45 @@ class ProgramStorageService {
     SavedProgram program, {
     required String sourceCode,
   }) async {
-    final List<SavedProgram> programs = await loadPrograms();
+    List<SavedProgram> programs = await loadPrograms();
+
+    // কোনো পুরোনো numbering gap থাকলে এখানেও ঠিক করে নেওয়া হয়।
+    programs = _renumberPrograms(programs);
 
     final int index = programs.indexWhere(
       (SavedProgram item) => item.id == program.id,
     );
 
-    final SavedProgram updated = program.copyWith(
-      sourceCode: sourceCode,
-      updatedAt: DateTime.now(),
-    );
+    final DateTime now = DateTime.now();
+
+    late final SavedProgram updated;
 
     if (index < 0) {
       if (programs.length >= maximumPrograms) {
         throw const ProgramStorageLimitException();
       }
 
+      // Storage-এ program না থাকলে নতুন sequential number।
+      updated = SavedProgram(
+        id: program.id,
+        programNumber: programs.length + 1,
+        sourceCode: sourceCode,
+        createdAt: program.createdAt,
+        updatedAt: now,
+      );
+
       programs.add(updated);
     } else {
+      // খুব গুরুত্বপূর্ণ:
+      // Editor-এর পুরোনো programNumber নয়,
+      // storage-এর বর্তমান renumbered program ব্যবহার করা হবে।
+      final SavedProgram storedProgram = programs[index];
+
+      updated = storedProgram.copyWith(
+        sourceCode: sourceCode,
+        updatedAt: now,
+      );
+
       programs[index] = updated;
     }
 
@@ -200,11 +217,17 @@ class ProgramStorageService {
   Future<void> deleteProgram(
     SavedProgram program,
   ) async {
-    final List<SavedProgram> programs = await loadPrograms();
+    List<SavedProgram> programs = await loadPrograms();
 
     programs.removeWhere(
       (SavedProgram item) => item.id == program.id,
     );
+
+    // Delete-এর পর:
+    // Program 1, Program 3, Program 4
+    // হয়ে যাবে:
+    // Program 1, Program 2, Program 3
+    programs = _renumberPrograms(programs);
 
     await _savePrograms(programs);
 
@@ -218,7 +241,9 @@ class ProgramStorageService {
     }
 
     if (programs.isEmpty) {
-      await preferences.remove(_currentProgramIdKey);
+      await preferences.remove(
+        _currentProgramIdKey,
+      );
       return;
     }
 
@@ -226,6 +251,36 @@ class ProgramStorageService {
       _currentProgramIdKey,
       programs.first.id,
     );
+  }
+
+  List<SavedProgram> _renumberPrograms(
+    List<SavedProgram> programs,
+  ) {
+    programs.sort(
+      (SavedProgram first, SavedProgram second) {
+        return first.programNumber.compareTo(
+          second.programNumber,
+        );
+      },
+    );
+
+    final List<SavedProgram> renumberedPrograms = <SavedProgram>[];
+
+    for (int i = 0; i < programs.length; i++) {
+      final SavedProgram program = programs[i];
+
+      renumberedPrograms.add(
+        SavedProgram(
+          id: program.id,
+          programNumber: i + 1,
+          sourceCode: program.sourceCode,
+          createdAt: program.createdAt,
+          updatedAt: program.updatedAt,
+        ),
+      );
+    }
+
+    return renumberedPrograms;
   }
 
   Future<void> _savePrograms(
