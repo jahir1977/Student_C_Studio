@@ -1,20 +1,26 @@
 import '../models/sample_program.dart';
 
-/// All sample programs from HSC ICT অধ্যায় ৫ (প্রোগ্রামিং ভাষা),
-/// grouped by topic, for the Sample Program picker.
+/// Student C Studio Sample Program Library.
 ///
-/// NOTE: "প্রোগ্রাম ৫.৩২ — ইউজার ডিফাইন্ড ফাংশন" requires the
-/// FunctionChecker fix (see function_checker.dart) to run
-/// successfully in the app, since the current FunctionChecker does
-/// not recognise user-defined function calls. Every other program
-/// below uses only main()/printf()/scanf()/pow()/sqrt()/strlen()/
-/// strcmp(), which are already whitelisted.
+/// Category:
+/// 1. Text Book
+/// 2. Board Question
+/// 3. Special Example
+///
+/// Text Book programs are the existing p5_1 ... p5_32 programs.
+/// Special Example programs are the existing c1 ... c6 programs.
+/// Board Question programs will be added separately.
 const List<SampleProgram> sampleProgramLibrary = [
+  // ===============================================================
+  // TEXT BOOK
+  // ===============================================================
+
   // ---------------------------------------------------------------
   // ভেরিয়েবল ও ডেটা টাইপ
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_1_hello_world',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১ Hello World প্রদর্শন',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
@@ -24,8 +30,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_2_char_data_type',
+    category: ProgramCategory.textBook,
     titleBn: '৫.২ ক্যারেক্টার ডেটা টাইপ',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
@@ -37,8 +45,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_3_variable_update',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৩ ভ্যারিয়েবল আপডেট',
     topicTagBn: 'ভেরিয়েবল ও ডেটা টাইপ',
     code: '''#include<stdio.h>
@@ -58,6 +68,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_4_sum_difference',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৪ যোগফল ও বিয়োগফল',
     topicTagBn: 'গাণিতিক অপারেটর ও এক্সপ্রেশন',
     code: '''#include<stdio.h>
@@ -73,8 +84,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_5_product_quotient',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৫ গুণফল ও ভাগফল',
     topicTagBn: 'গাণিতিক অপারেটর ও এক্সপ্রেশন',
     code: '''#include<stdio.h>
@@ -96,6 +109,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_6_user_input_sum',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৬ ব্যবহারকারীর ইনপুট নিয়ে যোগফল',
     topicTagBn: 'ইনপুট/আউটপুট (scanf/printf)',
     code: '''#include<stdio.h>
@@ -109,8 +123,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_7_celsius_to_fahrenheit',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৭ সেলসিয়াস থেকে ফারেনহাইট',
     topicTagBn: 'ইনপুট/আউটপুট (scanf/printf)',
     code: '''#include<stdio.h>
@@ -130,6 +146,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_8_if_else_equal_static',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৮ দুটি সংখ্যা সমান কিনা (স্থির মান)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -149,8 +166,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_9_if_else_equal_input',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৯ দুটি সংখ্যা সমান কিনা (ইনপুট থেকে)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -170,8 +189,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_10_else_if_ladder',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১০ Else-If লেডার (বড়/ছোট নির্ণয়)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -195,8 +216,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_11_letter_grade',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১১ লেটার গ্রেড নির্ণয়',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -232,8 +255,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_12_logical_operator_job_age',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১২ লজিক্যাল অপারেটর (চাকরির বয়স যাচাই)',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -253,8 +278,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_13_modulus_divisible_3_5',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৩ মডুলাস: ৩ ও ৫ দ্বারা বিভাজ্য কিনা',
     topicTagBn: 'শর্ত নিয়ন্ত্রণ (if-else)',
     code: '''#include<stdio.h>
@@ -280,6 +307,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_14_while_print_5_times',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৪ While লুপ: ৫ বার প্রিন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -295,8 +323,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_15_print_1_to_100',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৫ ১ থেকে ১০০ পর্যন্ত প্রিন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -312,8 +342,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_16_print_even_1_to_100',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৬ ১ থেকে ১০০ পর্যন্ত জোড় সংখ্যা',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -329,8 +361,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_17_sum_1_to_100_while',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৭ ১ থেকে ১০০ পর্যন্ত যোগফল (while)',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -348,8 +382,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_18_do_while_1_to_100',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৮ Do-While লুপ',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -366,8 +402,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_19_for_loop_sum_1_to_100',
+    category: ProgramCategory.textBook,
     titleBn: '৫.১৯ For লুপ: ১ থেকে ১০০ যোগফল',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -383,8 +421,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_20_continue_statement',
+    category: ProgramCategory.textBook,
     titleBn: '৫.২০ Continue স্টেটমেন্ট',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -402,8 +442,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_21_multiplication_table',
+    category: ProgramCategory.textBook,
     titleBn: '৫.২১ নামতা (Multiplication Table)',
     topicTagBn: 'লুপ (while/do-while/for)',
     code: '''#include<stdio.h>
@@ -425,6 +467,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_22_array_declaration_students',
+    category: ProgramCategory.textBook,
     titleBn: '৫ জন শিক্ষার্থীর নম্বর অ্যারেতে রাখা',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
@@ -444,8 +487,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_23_array_sum',
+    category: ProgramCategory.textBook,
     titleBn: 'অ্যারের যোগফল (১০টি সংখ্যা)',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
@@ -464,8 +509,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_24_swapping_two_variables',
+    category: ProgramCategory.textBook,
     titleBn: 'মান অদলবদল (Swapping)',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
@@ -482,8 +529,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_25_array_reverse',
+    category: ProgramCategory.textBook,
     titleBn: 'অ্যারে রিভার্স',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
@@ -504,8 +553,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_28_linear_search',
+    category: ProgramCategory.textBook,
     titleBn: 'লিনিয়ার সার্চ',
     topicTagBn: 'অ্যারে (Array)',
     code: '''#include<stdio.h>
@@ -545,6 +596,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_26_string_input_name',
+    category: ProgramCategory.textBook,
     titleBn: 'স্ট্রিং ইনপুট (নাম)',
     topicTagBn: 'স্ট্রিং (String)',
     code: '''#include<stdio.h>
@@ -557,8 +609,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_27_string_length_loop',
+    category: ProgramCategory.textBook,
     titleBn: 'স্ট্রিং দৈর্ঘ্য (লুপ দিয়ে)',
     topicTagBn: 'স্ট্রিং (String)',
     code: '''#include<stdio.h>
@@ -583,6 +637,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_29_sqrt_function',
+    category: ProgramCategory.textBook,
     titleBn: 'গাণিতিক ফাংশন: sqrt()',
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
@@ -597,8 +652,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_30_pow_function',
+    category: ProgramCategory.textBook,
     titleBn: 'পাওয়ার ফাংশন: pow()',
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
@@ -613,8 +670,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'p5_31_strlen_strcmp',
+    category: ProgramCategory.textBook,
     titleBn: 'লাইব্রেরি ফাংশন: strlen() ও strcmp()',
     topicTagBn: 'লাইব্রেরি ফাংশন (math.h/string.h)',
     code: '''#include<stdio.h>
@@ -646,6 +705,7 @@ int main()
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'p5_32_user_defined_function',
+    category: ProgramCategory.textBook,
     titleBn: '৫.৩২ ইউজার ডিফাইন্ড ফাংশন',
     topicTagBn: 'ইউজার ডিফাইন্ড ফাংশন',
     code: '''#include<stdio.h>
@@ -667,11 +727,124 @@ int main()
 }''',
   ),
 
+  // ===============================================================
+// BOARD QUESTION
+// ===============================================================
+
+// ---------------------------------------------------------------
+// চট্টগ্রাম বোর্ড–২০১৮
+// ---------------------------------------------------------------
+  SampleProgram(
+    id: 'board_chattogram_2018_q_g',
+    category: ProgramCategory.boardQuestion,
+    titleBn: 'চট্টগ্রাম বোর্ড–২০১৮: প্রশ্ন (ঘ) — for-এর পরিবর্তে do-while',
+    topicTagBn: 'চট্টগ্রাম বোর্ড–২০১৮',
+    code: '''#include<stdio.h>
+
+int main()
+{
+    int i, n, sum = 0;
+
+    printf("Enter the value of n: ");
+    scanf("%d", &n);
+
+    i = 1;
+
+    do
+    {
+        sum = sum + i;
+        i++;
+    }
+    while(i <= n);
+
+    printf("Sum = %d", sum);
+
+    return 0;
+}''',
+  ),
+
+// ---------------------------------------------------------------
+// ঢাকা বোর্ড–২০১৮
+// ---------------------------------------------------------------
+  SampleProgram(
+    id: 'board_dhaka_2018_q_g',
+    category: ProgramCategory.boardQuestion,
+    titleBn: 'ঢাকা বোর্ড–২০১৮: প্রশ্ন (ঘ) — রোল অনুযায়ী দল গঠন',
+    topicTagBn: 'ঢাকা বোর্ড–২০১৮',
+    code: '''#include<stdio.h>
+
+int main()
+{
+    int roll;
+
+    printf("Enter student roll: ");
+    scanf("%d", &roll);
+
+    if(roll >= 1 && roll <= 30)
+    {
+        printf("Assigned Group: A");
+    }
+    else if(roll >= 31 && roll <= 60)
+    {
+        printf("Assigned Group: B");
+    }
+    else if(roll >= 61 && roll <= 100)
+    {
+        printf("Assigned Group: C");
+    }
+    else
+    {
+        printf("Invalid roll number");
+    }
+
+    return 0;
+}''',
+  ),
+  //
+  // Board Question programগুলো পরের ধাপে এখানে যোগ হবে।
+  //
+  // Example:
+  //
+  // SampleProgram(
+  //   id: 'board_2019_example',
+  //   category: ProgramCategory.boardQuestion,
+  //   titleBn: 'বোর্ড প্রশ্ন ...',
+  //   topicTagBn: '২০১৯',
+  //   code: '''...''',
+  // ),
+
+  // ===============================================================
+// SPECIAL EXAMPLE
+// ===============================================================
+
+  SampleProgram(
+    id: 'special_sum_even_1_to_100',
+    category: ProgramCategory.specialExample,
+    titleBn: '১ থেকে ১০০ পর্যন্ত জোড় সংখ্যার যোগফল',
+    topicTagBn: 'লুপের বিশেষ উদাহরণ',
+    code: '''#include<stdio.h>
+
+int main()
+{
+    int i, sum = 0;
+
+    for(i = 2; i <= 100; i = i + 2)
+    {
+        sum = sum + i;
+    }
+
+    printf("Sum = %d", sum);
+
+    return 0;
+}''',
+  ),
+
   // ---------------------------------------------------------------
   // সৃজনশীল প্রশ্ন সমাধান
   // ---------------------------------------------------------------
   SampleProgram(
     id: 'c1_sum_odd_1_to_30',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ১: ১-৩০ বিজোড় সংখ্যার যোগফল',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
@@ -687,8 +860,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'c2_reverse_digits',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ২: সংখ্যার অংক বিপরীত ক্রমে',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
@@ -708,8 +883,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'c3_celsius_to_fahrenheit_flowchart',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ৩: সেলসিয়াস থেকে ফারেনহাইট (ফ্লোচার্ট অনুযায়ী)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
@@ -723,8 +900,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'c4_group_by_roll',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ৪: রোল নম্বর অনুযায়ী গ্রুপ (A/B/C)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
@@ -748,8 +927,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'c5_fahrenheit_to_celsius',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ৫: ফারেনহাইট থেকে সেলসিয়াস',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
@@ -763,8 +944,10 @@ int main()
     return 0;
 }''',
   ),
+
   SampleProgram(
     id: 'c6_lcm_gcd',
+    category: ProgramCategory.specialExample,
     titleBn: 'সৃজনশীল ৬: ল.সা.গু (LCM) ও গ.সা.গু (GCD)',
     topicTagBn: 'সৃজনশীল প্রশ্ন সমাধান',
     code: '''#include<stdio.h>
