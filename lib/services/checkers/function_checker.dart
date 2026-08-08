@@ -9,6 +9,7 @@ class FunctionChecker implements CompilerChecker {
     'scanf',
     'pow',
     'sqrt',
+    'fabs',
     'strlen',
     'strcmp',
     'getch',
@@ -72,6 +73,7 @@ class FunctionChecker implements CompilerChecker {
 • scanf()
 • pow()
 • sqrt()
+• fabs()
 • strlen()
 • strcmp()
 • getch()

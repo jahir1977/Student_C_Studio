@@ -26,7 +26,9 @@ class HeaderChecker implements CompilerChecker {
         }
       }
 
-      if (_containsFunction(line, 'pow') || _containsFunction(line, 'sqrt')) {
+      if (_containsFunction(line, 'pow') ||
+          _containsFunction(line, 'sqrt') ||
+          _containsFunction(line, 'fabs')) {
         if (!hasMath) {
           return CompilerResult.failure(
             error: "Missing header file 'math.h'.",
@@ -109,7 +111,9 @@ class HeaderChecker implements CompilerChecker {
         }
       }
 
-      if (_containsFunction(line, 'pow') || _containsFunction(line, 'sqrt')) {
+      if (_containsFunction(line, 'pow') ||
+          _containsFunction(line, 'sqrt') ||
+          _containsFunction(line, 'fabs')) {
         if (!hasMath) {
           return CompilerResult.failure(
             error: "Missing header file 'math.h'.",

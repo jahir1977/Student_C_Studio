@@ -2685,6 +2685,10 @@ class _NumericExpressionParser {
         switch (variableName) {
           case 'sqrt':
             return math.sqrt(firstArgument.toDouble());
+
+          case 'fabs':
+            return firstArgument.toDouble().abs();
+
           default:
             return null;
         }

@@ -10,6 +10,7 @@ void main() {
 • scanf()
 • pow()
 • sqrt()
+• fabs()
 • strlen()
 • strcmp()
 • getch()

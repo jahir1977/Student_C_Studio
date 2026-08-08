@@ -2162,5 +2162,18 @@ printf("%f", result);
         '8.000000',
       );
     });
+    test('supports fabs function', () {
+      const String code = '''
+float x = -7.25;
+float result;
+result = fabs(x);
+printf("%.2f", result);
+''';
+
+      expect(
+        engine.execute(code),
+        '7.25',
+      );
+    });
   });
 }
