@@ -1335,6 +1335,40 @@ class _EducationalExecutor {
 
       return;
     }
+    // এখানে strcat() block বসবে
+    final RegExpMatch? strcatMatch = RegExp(
+      r'^strcat\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(.+)\s*\)$',
+      dotAll: true,
+    ).firstMatch(normalized);
+
+    if (strcatMatch != null) {
+      final String destinationName = strcatMatch.group(1)!;
+      final String sourceExpression = strcatMatch.group(2)!.trim();
+
+      final Object? sourceValue = _evaluateValue(sourceExpression);
+
+      if (sourceValue is! String) {
+        return;
+      }
+
+      final _VariableValue? destination = _variables[destinationName];
+
+      if (destination == null ||
+          destination.type != _CValueType.stringValue ||
+          destination.value is! String) {
+        return;
+      }
+
+      final String currentValue = destination.value as String;
+
+      _variables[destinationName] = _VariableValue(
+        type: _CValueType.stringValue,
+        value: currentValue + sourceValue,
+      );
+
+      return;
+    }
+
     final RegExp postfixPattern = RegExp(
       r'^([A-Za-z_][A-Za-z0-9_]*)\s*(\+\+|--)$',
     );

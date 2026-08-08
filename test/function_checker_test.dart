@@ -14,6 +14,7 @@ void main() {
 • strlen()
 • strcmp()
 • strcpy()
+• strcat()
 • getch()
 ''';
 

@@ -2189,7 +2189,7 @@ printf("%d", length);
       );
     });
     test('supports strcmp function for equal strings', () {
-  const String code = '''
+      const String code = '''
 char first[30] = "Bangladesh";
 char second[30] = "Bangladesh";
 int result;
@@ -2197,13 +2197,13 @@ result = strcmp(first, second);
 printf("%d", result);
 ''';
 
-  expect(
-    engine.execute(code),
-    '0',
-  );
-});
-test('supports strcmp function for different strings', () {
-  const String code = '''
+      expect(
+        engine.execute(code),
+        '0',
+      );
+    });
+    test('supports strcmp function for different strings', () {
+      const String code = '''
 char first[30] = "Apple";
 char second[30] = "Banana";
 int result;
@@ -2211,25 +2211,40 @@ result = strcmp(first, second);
 printf("%d", result);
 ''';
 
-  final String output = engine.execute(code);
+      final String output = engine.execute(code);
 
-  expect(
-    int.parse(output),
-    lessThan(0),
-  );
-});
-test('supports strcpy function', () {
-  const String code = '''
+      expect(
+        int.parse(output),
+        lessThan(0),
+      );
+    });
+    test('supports strcpy function', () {
+      const String code = '''
 char source[30] = "Bangladesh";
 char destination[30];
 strcpy(destination, source);
 printf("%s", destination);
 ''';
 
-  expect(
-    engine.execute(code),
-    'Bangladesh',
-  );
-});
+      expect(
+        engine.execute(code),
+        'Bangladesh',
+      );
+    });
+    test('supports strcat function', () {
+      const String code = '''
+char first[30] = "Hello ";
+char second[30] = "World";
+
+strcat(first, second);
+
+printf("%s", first);
+''';
+
+      expect(
+        engine.execute(code),
+        'Hello World',
+      );
+    });
   });
 }

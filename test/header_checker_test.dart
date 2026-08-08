@@ -78,7 +78,7 @@ int main()
       expect(result.error, "Missing header file 'math.h'.");
       expect(
         result.banglaExplanation,
-        "pow() অথবা sqrt() ব্যবহারের জন্য #include<math.h> লিখতে হবে।",
+        "pow(), sqrt() অথবা fabs() ব্যবহারের জন্য #include<math.h> লিখতে হবে।",
       );
       expect(result.errorLine, 3);
     });
@@ -118,7 +118,7 @@ int main()
       expect(result.error, "Missing header file 'string.h'.");
       expect(
         result.banglaExplanation,
-        "strlen() অথবা strcmp() অথবা strcpy() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
+        "strlen(), strcmp(), strcpy() অথবা strcat() ব্যবহারের জন্য #include<string.h> লিখতে হবে।",
       );
       expect(result.errorLine, 3);
     });
