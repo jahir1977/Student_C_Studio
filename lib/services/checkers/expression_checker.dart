@@ -3,7 +3,8 @@ import '../../models/compiler_context.dart';
 import 'compiler_checker.dart';
 
 class ExpressionChecker implements CompilerChecker {
-  @override
+  // @override মুছে দিতে হবে
+  //Legacy check() method; CompilerChecker only requires checkContext().
   CompilerResult check(String sourceCode) {
     final ternaryResult = _checkTernaryOperators(sourceCode);
 
@@ -38,7 +39,8 @@ class ExpressionChecker implements CompilerChecker {
       if (emptyRightSideMatch != null) {
         return CompilerResult.failure(
           error: "Expression expected after '='.",
-          explanation: "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
+          explanation:
+              "সমান চিহ্নের পরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন লিখতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -62,7 +64,8 @@ class ExpressionChecker implements CompilerChecker {
 
         return CompilerResult.failure(
           error: "Expression cannot start with operator '$operator'.",
-          explanation: "অ্যাসাইনমেন্ট চিহ্নের পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
+          explanation:
+              "অ্যাসাইনমেন্ট চিহ্নের পরে সরাসরি অপারেটর ব্যবহার করা যাবে না।",
           errorLine: i + 1,
         );
       }
@@ -88,7 +91,8 @@ class ExpressionChecker implements CompilerChecker {
       if (operatorBeforeClosingParenthesis != null) {
         return CompilerResult.failure(
           error: "Expression is incomplete before closing parenthesis.",
-          explanation: "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
+          explanation:
+              "সমাপনী বন্ধনীর আগে অপারেটরের পরে একটি মান বা ভেরিয়েবল থাকতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -109,7 +113,8 @@ class ExpressionChecker implements CompilerChecker {
       if (emptyParenthesisMatch != null) {
         return CompilerResult.failure(
           error: "Empty parenthesis is not allowed.",
-          explanation: "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
+          explanation:
+              "খালি বন্ধনীর ভেতরে একটি মান, ভেরিয়েবল বা এক্সপ্রেশন থাকতে হবে।",
           errorLine: i + 1,
         );
       }
@@ -124,7 +129,8 @@ class ExpressionChecker implements CompilerChecker {
         if (missingOperatorMatch != null) {
           return CompilerResult.failure(
             error: "Operator expected between operands.",
-            explanation: "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
+            explanation:
+                "দুইটি মান বা ভেরিয়েবলের মাঝে একটি অপারেটর থাকতে হবে।",
             errorLine: i + 1,
           );
         }
@@ -287,7 +293,8 @@ class ExpressionChecker implements CompilerChecker {
             if (!isSwitchLabel && line.contains('=')) {
               return CompilerResult.failure(
                 error: "Ternary operator is missing '?'.",
-                explanation: "শর্তের পরে '?' চিহ্ন ব্যবহার করে সত্য মানটি লিখতে হবে।",
+                explanation:
+                    "শর্তের পরে '?' চিহ্ন ব্যবহার করে সত্য মানটি লিখতে হবে।",
                 errorLine: lineIndex + 1,
               );
             }
@@ -307,7 +314,8 @@ class ExpressionChecker implements CompilerChecker {
           if (_isExpressionEmpty(trueExpression)) {
             return CompilerResult.failure(
               error: "True expression is missing after '?'.",
-              explanation: "'?' চিহ্নের পরে শর্ত সত্য হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
+              explanation:
+                  "'?' চিহ্নের পরে শর্ত সত্য হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
               errorLine: question.lineNumber,
             );
           }
@@ -319,7 +327,8 @@ class ExpressionChecker implements CompilerChecker {
               remainingText.startsWith(')')) {
             return CompilerResult.failure(
               error: "False expression is missing after ':'.",
-              explanation: "':' চিহ্নের পরে শর্ত মিথ্যা হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
+              explanation:
+                  "':' চিহ্নের পরে শর্ত মিথ্যা হলে যে মানটি নেওয়া হবে তা লিখতে হবে।",
               errorLine: lineIndex + 1,
             );
           }
@@ -332,7 +341,8 @@ class ExpressionChecker implements CompilerChecker {
 
       return CompilerResult.failure(
         error: "Ternary operator is missing ':'.",
-        explanation: "'?' চিহ্নের পরে সত্য মান এবং ':' চিহ্নের পরে মিথ্যা মান লিখতে হবে।",
+        explanation:
+            "'?' চিহ্নের পরে সত্য মান এবং ':' চিহ্নের পরে মিথ্যা মান লিখতে হবে।",
         errorLine: question.lineNumber,
       );
     }

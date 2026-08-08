@@ -2136,5 +2136,18 @@ printf("%d", count);
         '4',
       );
     });
+    test('supports sqrt function', () {
+  const String code = '''
+float x = 4;
+float result;
+result = sqrt(x);
+printf("%f", result);
+''';
+
+  expect(
+    engine.execute(code),
+    '2.000000',
+  );
+});
   });
 }

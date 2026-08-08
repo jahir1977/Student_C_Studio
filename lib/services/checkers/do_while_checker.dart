@@ -3,7 +3,8 @@ import '../../models/compiler_context.dart';
 import 'compiler_checker.dart';
 
 class DoWhileChecker implements CompilerChecker {
-  @override
+  // @override মুছে দিতে হবে
+  //Legacy check() method; CompilerChecker only requires checkContext().
   CompilerResult check(String code) {
     final String cleanedCode = _removeCommentsAndStrings(code);
     final RegExp doPattern = RegExp(r'\bdo\b');

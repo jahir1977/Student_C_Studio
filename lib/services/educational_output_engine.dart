@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 class EducationalOutputEngine {
   const EducationalOutputEngine();
 
@@ -2645,6 +2647,24 @@ class _NumericExpressionParser {
 
       _skipWhitespace();
 
+      // Built-in numeric function support.
+      if (_cursor < source.length && source[_cursor] == '(') {
+        _cursor++;
+
+        final num? argument = _parseAdditionSubtraction();
+
+        _skipWhitespace();
+
+        if (!_match(')') || argument == null) {
+          return null;
+        }
+        switch (variableName) {
+          case 'sqrt':
+            return math.sqrt(argument.toDouble());
+          default:
+            return null;
+        }
+      }
       // Array element support:
       // arr[0], arr[i], arr[i + 1], arr[2 * i]
       if (_cursor < source.length && source[_cursor] == '[') {
